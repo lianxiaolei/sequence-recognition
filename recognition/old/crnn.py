@@ -151,7 +151,7 @@ def gen(batch_size=128, gene=4):
 
 def ctc_lambda_func(args):
     y_pred, labels, input_length, label_length = args
-    y_pred = y_pred[:, 2:, :]
+    y_pred = y_pred[:, 2:, :]  # [batch, rnn-step(height) - 2, num_class]
     return K.ctc_batch_cost(labels, y_pred, input_length, label_length)
 
 
@@ -207,28 +207,29 @@ conv_shape = x.get_shape().as_list()
 rnn_length = conv_shape[1]
 rnn_dimen = conv_shape[2] * conv_shape[3]
 print(conv_shape, rnn_length, rnn_dimen)
-x = Reshape(target_shape=(rnn_length, rnn_dimen))(x)
+x = Reshape(target_shape=(rnn_length, rnn_dimen))(x)  # [batch, height, width * units]
 rnn_length -= 2
 
 # x = Reshape(target_shape=(int(conv_shape[1]), int(conv_shape[2]*conv_shape[3])))(x)
 
-x = Dense(128, kernel_initializer='he_normal')(x)
+x = Dense(rnn_size, kernel_initializer='he_normal')(x)
 x = BatchNormalization()(x)
 x = Activation('relu')(x)
 
 gru_1 = GRU(rnn_size, return_sequences=True, kernel_initializer='he_normal', name='gru1')(x)
 gru_1b = GRU(rnn_size, return_sequences=True, go_backwards=True, kernel_initializer='he_normal',
              name='gru1_b')(x)
-gru1_merged = add([gru_1, gru_1b])
+gru1_merged = add([gru_1, gru_1b])  # [batch, height, units]
 
 gru_2 = GRU(rnn_size, return_sequences=True, kernel_initializer='he_normal', name='gru2')(gru1_merged)
 gru_2b = GRU(rnn_size, return_sequences=True, go_backwards=True, kernel_initializer='he_normal',
              name='gru2_b')(gru1_merged)
 
-x = concatenate([gru_2, gru_2b])
+x = concatenate([gru_2, gru_2b])  # [batch, height, units * 2]
 x = Dropout(0.25)(x)
+# [batch, height, n_class]
 x = Dense(n_class, kernel_initializer='he_normal', activation='softmax')(x)
-base_model = Model(input=input_tensor, output=x)
+base_model = Model(input=input_tensor, output=x)  # [batch, height, units * 2]
 
 # base_model2 = make_parallel(base_model, 4)
 
