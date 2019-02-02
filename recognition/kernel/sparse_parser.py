@@ -18,7 +18,7 @@ def sparse_tuple_from(sequences, dtype=np.int32):
     values = []
 
     for n, seq in enumerate(sequences):
-        print(n, len(seq))
+        # print(n, len(seq))
         indices.extend(zip([n] * len(seq), range(len(seq))))
         values.extend(seq)
 
@@ -64,3 +64,4 @@ if __name__ == '__main__':
     print(b)
     print('--' * 20)
     print(c)
+    print(decode_sparse_tensor((a, b, c)))

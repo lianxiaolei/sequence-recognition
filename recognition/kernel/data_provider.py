@@ -8,7 +8,8 @@ import skimage
 from keras.preprocessing.image import ImageDataGenerator
 from recognition.kernel.sparse_parser import *
 
-characters = '0123456789+-*/=()'
+# characters = '0123456789+-*/=()'
+characters = '0123456789'
 width, height, n_len, n_class = 400, 80, 10, len(characters) + 1
 
 datagen = ImageDataGenerator(
@@ -29,7 +30,7 @@ def generate():
     return random.choice(ts).format(*cs)
 
 
-def get_img_by_char(char, base_path='./pre_ocr'):
+def get_img_by_char(char, base_path='../../dataset/nums'):
     """
     get a img by giving char
     :param char:
@@ -61,7 +62,7 @@ def get_sequence_img(chars):
     return x
 
 
-def get_next_batch(batch_size=128, gene=4):
+def get_next_batch(batch_size=128, gene=1):
     X = np.zeros((batch_size, width, height, 1), dtype=np.uint8)
     y = np.zeros((batch_size, n_len), dtype=np.uint8)
     for i in range(batch_size):
@@ -92,10 +93,11 @@ def get_next_batch(batch_size=128, gene=4):
             break
 
     sparse_target = sparse_tuple_from(yy)
-    seq_len = np.ones(batch_size) * 50
+    seq_len = np.ones(batch_size) * 10
 
     return XX, sparse_target, seq_len
 
 
 if __name__ == '__main__':
-    pass
+    res = get_next_batch(1, 1)
+    print(res)
