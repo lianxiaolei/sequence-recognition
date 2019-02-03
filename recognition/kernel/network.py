@@ -187,7 +187,8 @@ class CRNN():
                                                      dense_shape=[first_dim, second_dim])
 
                     edit_distance = tf.edit_distance(decoded_tensor, self.y, name='edit_distance')
-                    self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_mean(edit_distance), name='subtract')
+                    self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_mean(edit_distance),
+                                           name='subtract')
                     self.acc_op = tf.identity(self.acc)
 
                 self.learning_rate = 1e-3
@@ -224,12 +225,16 @@ class CRNN():
 
     def _accuracy(self):
         test_inputs, test_targets, test_seq_len = get_next_batch(self.FLAGS.batch_size)
+        print('test sequence length:', test_seq_len)
+        decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
+                                                          test_seq_len,
+                                                          merge_repeated=False)
         test_feed = {self.X: test_inputs,
                      self.y: test_targets,
                      self.seq_len: test_seq_len,
-                     self.keep_prob: self.FLAGS.dropout_keep_prob}
-        dd, log_probs, accuracy = self.sess.run([self.decoded[0], self.log_prob, self.acc_op],
-                                                feed_dict=test_feed)
+                     self.keep_prob: 1.}
+        dd, log_probs = self.sess.run([decoded[0], log_prob],
+                                      feed_dict=test_feed)
         self.calc_accuracy(dd, test_targets)
 
     def summary(self):
@@ -317,7 +322,7 @@ class CRNN():
         for epoch in range(100):
             for step in range(128):
                 inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-                print('sequence length', seq_len)
+                # print('sequence length', seq_len)
                 self.train_step(inputs, sparse_targets, seq_len)
                 current_step = tf.train.global_step(self.sess, self.global_step)
                 if current_step % self.FLAGS.evaluate_every == 0:
@@ -345,3 +350,4 @@ if __name__ == '__main__':
     crnn.architecture(input_shape=[None, 400, 80, 1])
     print('Build model done!')
     crnn.run()
+    tf.nn.softmax_cross_entropy_with_logits_v2
