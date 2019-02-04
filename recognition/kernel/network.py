@@ -6,18 +6,10 @@ from __future__ import print_function
 
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
-from tensorflow.contrib.slim import losses
-from tensorflow.contrib.slim import arg_scope
-from abc import ABCMeta, abstractmethod
-import matplotlib.pyplot as plt
 from tensorflow.contrib import rnn
-import numpy as np
 import datetime
 import time
-import os
-from recognition.kernel.sparse_parser import *
 from recognition.kernel.data_provider import *
-import sys
 
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
@@ -350,4 +342,4 @@ if __name__ == '__main__':
     crnn.architecture(input_shape=[None, 400, 80, 1])
     print('Build model done!')
     crnn.run()
-    tf.nn.softmax_cross_entropy_with_logits_v2
+    print('Training done!')
