@@ -158,7 +158,7 @@ class CRNN():
           #                                                             merge_repeated=False)
 
           self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(self.output,
-                                                                 self.seq_len)
+                                                                 self.seq_len, merge_repeated=False)
 
           concat_indices = None
           concat_values = None
