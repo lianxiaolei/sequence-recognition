@@ -155,7 +155,8 @@ class CRNN():
           #                                                             merge_repeated=False)
 
           self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output,
-                                                                 self.seq_len, merge_repeated=False)
+                                                                      self.seq_len, merge_repeated=False,
+                                                                      top_paths=self.FLAGS.batch_size)
 
           concat_indices = None
           concat_values = None
@@ -167,7 +168,7 @@ class CRNN():
               concat_values = decoded.values
             else:
               decoded_indices = tf.concat([tf.expand_dims(decoded.indices[:, 0] + accelerate_indices, axis=-1),
-                                          tf.expand_dims(decoded.indices[:, 1], axis=-1)], axis=1)
+                                           tf.expand_dims(decoded.indices[:, 1], axis=-1)], axis=1)
               concat_indices = tf.concat([concat_indices, decoded_indices], axis=0)
               concat_values = tf.concat([concat_values, decoded.values], axis=0)
 
