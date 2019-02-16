@@ -145,8 +145,8 @@ class CRNN():
           #   tf.nn.ctc_loss(labels=self.y, inputs=self.output,
           #                  sequence_length=self.seq_len, preprocess_collapse_repeated=True))
           # self.loss = tf.reduce_mean(ctc_loss_list)
-          self.loss = tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-                                     sequence_length=self.seq_len, preprocess_collapse_repeated=True)
+          self.loss = tf.reduce_mean(tf.nn.ctc_loss(labels=self.y, inputs=self.output,
+                                                    sequence_length=self.seq_len, preprocess_collapse_repeated=True))
 
         # 使用编辑距离计算准确率
         with tf.name_scope('accuracy'):
@@ -202,8 +202,8 @@ class CRNN():
         # self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
         # self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step)
 
-        self.train_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate)\
-          .minimize(tf.reduce_mean(self.loss), global_step=self.global_step)
+        self.train_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+          .minimize(self.loss, global_step=self.global_step)
 
         # 开始记录信息
         self.summary()
