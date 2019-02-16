@@ -68,7 +68,8 @@ def make_parallel(model, gpu_count):
         return Model(model.inputs, merged)
 
 
-characters = '0123456789+-*/=()'
+# characters = '0123456789+-*/=()'
+characters = '0123456789'
 width, height, n_len, n_class = 400, 80, 10, len(characters) + 1
 
 
@@ -81,7 +82,7 @@ def generate():
     return random.choice(ts).format(*cs)
 
 
-def get_img_by_char(char, base_path='../dataset/nums'):
+def get_img_by_char(char, base_path='../../dataset/nums'):
     """
     get a img by giving char
     :param char:
@@ -95,7 +96,6 @@ def get_img_by_char(char, base_path='../dataset/nums'):
     files = os.listdir(path)
 
     rdm = random.randint(0, len(files) - 1)
-
     if rdm >= len(files):
         print(path, len(files), rdm)
 
@@ -237,7 +237,7 @@ labels = Input(name='the_labels', shape=[n_len], dtype='float32')
 input_length = Input(name='input_length', shape=(1,), dtype='int64')
 label_length = Input(name='label_length', shape=(1,), dtype='int64')
 loss_out = Lambda(ctc_lambda_func, name='ctc')([base_model.output, labels, input_length, label_length])
-
+print('loss out', loss_out)
 model = Model(inputs=(input_tensor, labels, input_length, label_length), outputs=loss_out)
 model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer='adam')
 
