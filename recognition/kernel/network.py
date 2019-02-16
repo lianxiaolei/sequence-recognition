@@ -203,7 +203,7 @@ class CRNN():
         # self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step)
 
         self.train_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate)\
-          .minimize(self.loss, global_step=self.global_step)
+          .minimize(tf.reduce_mean(self.loss), global_step=self.global_step)
 
         # 开始记录信息
         self.summary()
