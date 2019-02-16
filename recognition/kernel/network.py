@@ -146,7 +146,9 @@ class CRNN():
           #  time_major默认为True
           ctc_loss_list = tf.identity(
             tf.nn.ctc_loss(self.y, self.output, sequence_length=self.seq_len, preprocess_collapse_repeated=True))
-          self.loss = tf.reduce_mean(ctc_loss_list)
+          # self.loss = tf.reduce_mean(ctc_loss_list)
+          self.loss = tf.nn.ctc_loss(self.y, self.output,
+                                     sequence_length=self.seq_len, preprocess_collapse_repeated=True)
 
         # 使用编辑距离计算准确率
         with tf.name_scope('accuracy'):
@@ -185,9 +187,9 @@ class CRNN():
                                            dense_shape=[first_dim, second_dim])
 
           edit_distance = tf.edit_distance(decoded_tensor, self.y, name='edit_distance')
-          # self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_min(edit_distance), name='subtract')
-          self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), edit_distance, name='subtract')
-          self.acc_op = tf.identity(self.acc)
+          self.acc_op = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_min(edit_distance), name='subtract')
+          # self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), edit_distance, name='subtract')
+          # self.acc_op = tf.identity(self.acc)
 
         self.learning_rate = 1e-3
 
