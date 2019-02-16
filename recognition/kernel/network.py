@@ -159,6 +159,7 @@ class CRNN():
           second_dim = 0
           concat_indices = None
           concat_values = None
+          accelerate_indices = 0
           for i in range(len(self.decoded)):
             decoded = self.decoded[i]
             first_dim += decoded.shape[0]
@@ -166,9 +167,12 @@ class CRNN():
               concat_indices = decoded.indices
               concat_values = decoded.values
             else:
-              concat_indices = tf.concat([concat_indices, decoded.indices], axis=0)
+              concat_indices = tf.concat([tf.expand_dims(decoded.indices[:, 0] + accelerate_indices, axis=-1),
+                                          tf.expand_dims(decoded.indices[:, 0].indices[:, 1], axis=-1)], axis=1)
+              # concat_indices = tf.concat([concat_indices, decoded.indices], axis=0)
               concat_values = tf.concat([concat_values, decoded.values], axis=0)
 
+            accelerate_indices += decoded.shape[0]
             first_dim = self.FLAGS.batch_size
             second_dim = tf.reduce_max(self.seq_len)
 
@@ -346,3 +350,4 @@ if __name__ == '__main__':
   print('Build model done!')
   crnn.run()
   print('Training done!')
+  tf.concat
