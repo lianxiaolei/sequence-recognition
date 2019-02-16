@@ -141,10 +141,11 @@ class CRNN():
         # 计算误差
         with tf.name_scope('loss'):
           #  time_major默认为True
-          ctc_loss_list = tf.identity(
-            tf.nn.ctc_loss(self.y, self.output, sequence_length=self.seq_len, preprocess_collapse_repeated=True))
+          # ctc_loss_list = tf.identity(
+          #   tf.nn.ctc_loss(labels=self.y, inputs=self.output,
+          #                  sequence_length=self.seq_len, preprocess_collapse_repeated=True))
           # self.loss = tf.reduce_mean(ctc_loss_list)
-          self.loss = tf.nn.ctc_loss(self.y, self.output,
+          self.loss = tf.nn.ctc_loss(labels=self.y, inputs=self.output,
                                      sequence_length=self.seq_len, preprocess_collapse_repeated=True)
 
         # 使用编辑距离计算准确率
@@ -197,10 +198,12 @@ class CRNN():
 
         self.global_step = tf.Variable(0, name='global_step', trainable=True)
 
-        self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
-        self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
+        # self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
+        # self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
+        # self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step)
 
-        self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step)
+        self.train_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate)\
+          .minimize(self.loss, global_step=self.global_step)
 
         # 开始记录信息
         self.summary()
