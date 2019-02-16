@@ -78,10 +78,7 @@ class CRNN():
 
     max_timesteps, batch_s, _ = x.get_shape().as_list()
 
-    # x = tf.reshape(x, [-1, self.rnn_units])
     x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
-    # Reshape the feature map to (max_timesteps, batch_size, num_classes)
-    # x = tf.reshape(x, [-1, max_timesteps, self.num_class])
 
     return x
 
@@ -157,7 +154,7 @@ class CRNN():
           #                                                             self.seq_len,
           #                                                             merge_repeated=False)
 
-          self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(self.output,
+          self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output,
                                                                  self.seq_len, merge_repeated=False)
 
           concat_indices = None
