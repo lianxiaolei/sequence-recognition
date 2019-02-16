@@ -156,11 +156,12 @@ class CRNN():
 
           self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output,
                                                                       self.seq_len, merge_repeated=False,
-                                                                      top_paths=self.FLAGS.batch_size)
+                                                                      top_paths=1)
 
           concat_indices = None
           concat_values = None
           accelerate_indices = 0
+          print('Decoded length:', len(self.decoded))
           for i in range(len(self.decoded)):
             decoded = self.decoded[i]
             if i == 0:
@@ -192,7 +193,7 @@ class CRNN():
           # self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), edit_distance, name='subtract')
           # self.acc_op = tf.identity(self.acc)
 
-        self.learning_rate = 1e-3
+        self.learning_rate = 1e-2
 
         self.global_step = tf.Variable(0, name='global_step', trainable=True)
 
@@ -229,14 +230,21 @@ class CRNN():
     print('test sequence length:', test_seq_len)
     decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
                                                       test_seq_len,
+                                                      top_paths=self.FLAGS.batch_size,
                                                       merge_repeated=False)
     test_feed = {self.X: test_inputs,
                  self.y: test_targets,
                  self.seq_len: test_seq_len,
                  self.keep_prob: 1.}
-    dd, log_probs = self.sess.run([decoded[0], log_prob],
-                                  feed_dict=test_feed)
-    self.calc_accuracy(dd, test_targets)
+    dds = []
+    log_probs = []
+    for i in range(self.FLAGS.batch_size):
+      dd, log_prob = self.sess.run([decoded[0], log_prob],
+                                   feed_dict=test_feed)
+      dds.append(dd)
+      log_probs.append(log_prob)
+
+    self.calc_accuracy(dds, test_targets)
 
   def summary(self):
     # Summary
