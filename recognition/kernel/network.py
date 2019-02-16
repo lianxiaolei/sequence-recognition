@@ -155,28 +155,26 @@ class CRNN():
                                                                       self.seq_len,
                                                                       merge_repeated=False)
 
-          first_dim = 0
-          second_dim = 0
           concat_indices = None
           concat_values = None
           accelerate_indices = 0
           for i in range(len(self.decoded)):
             decoded = self.decoded[i]
-            first_dim += decoded.shape[0]
             if i == 0:
               concat_indices = decoded.indices
               concat_values = decoded.values
             else:
-              concat_indices = tf.concat([tf.expand_dims(decoded.indices[:, 0] + accelerate_indices, axis=-1),
-                                          tf.expand_dims(decoded.indices[:, 0].indices[:, 1], axis=-1)], axis=1)
-              # concat_indices = tf.concat([concat_indices, decoded.indices], axis=0)
+              decoded_indices = tf.concat([tf.expand_dims(decoded.indices[:, 0] + accelerate_indices, axis=-1),
+                                          tf.expand_dims(decoded.indices[:, 1], axis=-1)], axis=1)
+              concat_indices = tf.concat([concat_indices, decoded_indices], axis=0)
               concat_values = tf.concat([concat_values, decoded.values], axis=0)
 
             accelerate_indices += decoded.shape[0]
-            first_dim = self.FLAGS.batch_size
-            second_dim = tf.reduce_max(self.seq_len)
 
-            concat_values = tf.cast(concat_values, tf.int32)
+          first_dim = self.FLAGS.batch_size
+          second_dim = tf.reduce_max(self.seq_len)
+
+          concat_values = tf.cast(concat_values, tf.int32)
 
           print('Informations  \noutput:{}\ndecoded:{},\nseq_len:{},'
                 '\nconcat_indices:{},\nconcat_values:{}'
