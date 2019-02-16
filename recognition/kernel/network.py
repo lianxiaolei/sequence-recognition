@@ -231,7 +231,7 @@ class CRNN():
     print('test sequence length:', test_seq_len)
     decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
                                                       test_seq_len,
-                                                      top_paths=self.FLAGS.batch_size,
+                                                      top_paths=1,
                                                       merge_repeated=False)
     test_feed = {self.X: test_inputs,
                  self.y: test_targets,
