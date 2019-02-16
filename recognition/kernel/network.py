@@ -209,16 +209,17 @@ class CRNN():
 
   def calc_accuracy(self, decode_list, test_target):
     original_list = decode_sparse_tensor(test_target)
-    detected_list = decode_sparse_tensor(decode_list)
+    # detected_list = decode_sparse_tensor(decode_list)
     true_numer = 0
 
-    if len(original_list) != len(detected_list):
-      print("len(original_list)", len(original_list), "len(detected_list)", len(detected_list),
-            " test and detect length desn't match")
-      return
+    # if len(original_list) != len(detected_list):
+    #   print("len(original_list)", len(original_list), "len(detected_list)", len(detected_list),
+    #         " test and detect length desn't match")
+    #   return
     print("T/F: original(length) <-------> detected(length)")
     for idx, number in enumerate(original_list):
-      detect_number = detected_list[idx]
+      detect_number = decode_sparse_tensor(decode_list[idx])
+      # detect_number = detected_list[idx]
       hit = (number == detect_number)
       print(hit, number, "(", len(number), ") <-------> ", detect_number, "(", len(detect_number), ")")
       if hit:
