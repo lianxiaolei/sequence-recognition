@@ -238,12 +238,13 @@ class CRNN():
                  self.seq_len: test_seq_len,
                  self.keep_prob: 1.}
     dds = []
-    log_probs = []
+    # log_probs = []
     for i in range(self.FLAGS.batch_size):
-      dd, log_prob = self.sess.run([decoded[0], log_prob],
-                                   feed_dict=test_feed)
+      print('calculate the %s decode' % i, decoded[i])
+      dd = self.sess.run(decoded[i],
+                         feed_dict=test_feed)
       dds.append(dd)
-      log_probs.append(log_prob)
+      # log_probs.append(log_prob)
 
     self.calc_accuracy(dds, test_targets)
 
