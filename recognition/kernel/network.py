@@ -209,17 +209,16 @@ class CRNN():
 
   def calc_accuracy(self, decode_list, test_target):
     original_list = decode_sparse_tensor(test_target)
-    # detected_list = decode_sparse_tensor(decode_list)
+    detected_list = decode_sparse_tensor(decode_list)
     true_numer = 0
 
-    # if len(original_list) != len(detected_list):
-    #   print("len(original_list)", len(original_list), "len(detected_list)", len(detected_list),
-    #         " test and detect length desn't match")
-    #   return
+    if len(original_list) != len(detected_list):
+      print("len(original_list)", len(original_list), "len(detected_list)", len(detected_list),
+            " test and detect length desn't match")
+      return
     print("T/F: original(length) <-------> detected(length)")
     for idx, number in enumerate(original_list):
-      detect_number = decode_sparse_tensor(decode_list[idx])
-      # detect_number = detected_list[idx]
+      detect_number = detected_list[idx]
       hit = (number == detect_number)
       print(hit, number, "(", len(number), ") <-------> ", detect_number, "(", len(detect_number), ")")
       if hit:
@@ -231,22 +230,14 @@ class CRNN():
     print('test sequence length:', test_seq_len)
     decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
                                                       test_seq_len,
-                                                      top_paths=1,
                                                       merge_repeated=False)
     test_feed = {self.X: test_inputs,
                  self.y: test_targets,
                  self.seq_len: test_seq_len,
                  self.keep_prob: 1.}
-    dds = []
-    # log_probs = []
-    for i in range(self.FLAGS.batch_size):
-      print('calculate the %s decode' % i, decoded[i])
-      dd = self.sess.run(decoded[i],
-                         feed_dict=test_feed)
-      dds.append(dd)
-      # log_probs.append(log_prob)
-
-    self.calc_accuracy(dds, test_targets)
+    dd, log_probs = self.sess.run([decoded[0], log_prob],
+                                  feed_dict=test_feed)
+    self.calc_accuracy(dd, test_targets)
 
   def summary(self):
     # Summary
