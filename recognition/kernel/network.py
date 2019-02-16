@@ -185,8 +185,8 @@ class CRNN():
                                            dense_shape=[first_dim, second_dim])
 
           edit_distance = tf.edit_distance(decoded_tensor, self.y, name='edit_distance')
-          self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_min(edit_distance),
-                                 name='subtract')
+          # self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_min(edit_distance), name='subtract')
+          self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), edit_distance, name='subtract')
           self.acc_op = tf.identity(self.acc)
 
         self.learning_rate = 1e-3
@@ -212,7 +212,7 @@ class CRNN():
       print("len(original_list)", len(original_list), "len(detected_list)", len(detected_list),
             " test and detect length desn't match")
       return
-    print("T/F: original(length) <-------> detectcted(length)")
+    print("T/F: original(length) <-------> detected(length)")
     for idx, number in enumerate(original_list):
       detect_number = detected_list[idx]
       hit = (number == detect_number)
