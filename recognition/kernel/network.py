@@ -252,14 +252,14 @@ class CRNN():
     loss_summary = tf.summary.scalar('loss_summ', tf.reduce_max(self.loss, name='reduce_max_loss'))
     acc_summary = tf.summary.scalar('accuracy_summ', self.acc_op)
 
-    grad_summaries = []
-    for g, v in self.grads_and_vars:
-      if g is not None:
-        grad_hist_summary = tf.summary.histogram("{}/grad/hist".format(v.name), g)
-        sparsity_summary = tf.summary.scalar("{}/grad/sparsity".format(v.name), tf.nn.zero_fraction(g))
-        grad_summaries.append(grad_hist_summary)
-        grad_summaries.append(sparsity_summary)
-    grad_summaries_merged = tf.summary.merge(grad_summaries)
+    # grad_summaries = []
+    # for g, v in self.grads_and_vars:
+    #   if g is not None:
+    #     grad_hist_summary = tf.summary.histogram("{}/grad/hist".format(v.name), g)
+    #     sparsity_summary = tf.summary.scalar("{}/grad/sparsity".format(v.name), tf.nn.zero_fraction(g))
+    #     grad_summaries.append(grad_hist_summary)
+    #     grad_summaries.append(sparsity_summary)
+    # grad_summaries_merged = tf.summary.merge(grad_summaries)
 
     # Train summaries
     # self.train_summary_op = tf.contrib.deprecated.merge_summary([loss_summary, acc_summary])
