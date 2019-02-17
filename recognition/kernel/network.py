@@ -54,12 +54,18 @@ class CRNN():
 
   def head2tail(self, x):
     self.rnn_units = self.FLAGS.rnn_units
-    # time major 模式需要的input shape:(max_time x batch_size x num_classes)
-    x = tf.transpose(x, (1, 0, 2, 3))
 
     shape = x.get_shape().as_list()
-    x = tf.reshape(x, shape=[shape[0], -1, shape[2] * shape[3]])
-    x = slim.fully_connected(x, self.rnn_units)
+    x = tf.reshape(x, shape=[-1, shape[1], shape[2] * shape[3]])
+    x = slim.fully_connected(x, self.num_class)
+
+    # time major 模式需要的input shape:(max_time x batch_size x num_classes)
+    x = tf.transpose(x, (1, 0, 2))
+
+    # 废弃的错误代码
+    # shape = x.get_shape().as_list()
+    # x = tf.reshape(x, shape=[shape[0], -1, shape[2] * shape[3]])
+    # x = slim.fully_connected(x, self.rnn_units - 1)
 
     cell = rnn.LSTMCell(self.rnn_units, use_peepholes=True, name='frnn')
     back_cell = rnn.LSTMCell(self.rnn_units, use_peepholes=True, name='brnn')
@@ -110,7 +116,7 @@ class CRNN():
 
     # 定义CNN kernels
     with tf.name_scope(name='cnn_kernels'):
-      kernel_shape = [3, 3, 1, 128]
+      kernel_shape = [3, 3, 1, 32]
       self.w00 = self._init_variable(kernel_shape, name='conv_w00')
       for i in range(3):
         for j in range(2):
@@ -194,7 +200,7 @@ class CRNN():
           # self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), edit_distance, name='subtract')
           # self.acc_op = tf.identity(self.acc)
 
-        self.learning_rate = 1e-2
+        self.learning_rate = 1e-3
 
         self.global_step = tf.Variable(0, name='global_step', trainable=True)
 
@@ -349,10 +355,9 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer("evaluate_every",
                               10, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
-                              128, "Rnn Units")
+                              100, "Rnn Units")
   crnn = CRNN(11)
   crnn.architecture(input_shape=[None, 400, 80, 1])
   print('Build model done!')
   crnn.run()
   print('Training done!')
-  tf.concat
