@@ -319,7 +319,7 @@ class CRNN():
 
     time_str = datetime.datetime.now().isoformat()
     # print("{}:step{},loss:{},acc:{},decoded:{}".format(time_str, step, loss, accuracy, self.decoded[0]))
-    print("step{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
+    print("step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
 
     # self.train_summary_writer.add_summary(summaries, step)
     if step % self.FLAGS.batch_size == 0:
