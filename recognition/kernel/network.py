@@ -364,7 +364,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             0.85, "Dropout keep probability (default: 0.5)")
   tf.app.flags.DEFINE_integer("evaluate_every",
-                              10, "Evaluate model on dev set after this many steps (default: 100)")
+                              64, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   crnn = CRNN(11)
