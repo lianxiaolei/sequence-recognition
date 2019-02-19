@@ -158,12 +158,12 @@ class CRNN():
         # 计算误差
         with tf.name_scope('loss'):
           #  time_major默认为True
-          # ctc_loss_list = tf.identity(
-          #   tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-          #                  sequence_length=self.seq_len, preprocess_collapse_repeated=True))
-          # self.loss = tf.reduce_mean(ctc_loss_list)
-          self.loss = tf.reduce_mean(tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-                                                    sequence_length=self.seq_len, preprocess_collapse_repeated=True))
+          self.loss = tf.identity(
+            tf.nn.ctc_loss(labels=self.y, inputs=self.output,
+                           sequence_length=self.seq_len, preprocess_collapse_repeated=True))
+
+          # self.loss = tf.reduce_mean(tf.nn.ctc_loss(labels=self.y, inputs=self.output,
+          #                                           sequence_length=self.seq_len, preprocess_collapse_repeated=True))
 
         # 使用编辑距离计算准确率
         with tf.name_scope('accuracy'):
