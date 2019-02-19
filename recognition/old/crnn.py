@@ -163,7 +163,9 @@ def evaluate(batch_size=128, steps=10):
         y_pred = base_model.predict(X_test)
         shape = y_pred[:, 2:, :].shape
         ctc_decode = K.ctc_decode(y_pred[:, 2:, :], input_length=np.ones(shape[0]) * shape[1])[0][0]
-        out = K.get_value(ctc_decode)[:, :n_len]
+        # out = K.get_value(ctc_decode)[:, :n_len]
+        out = K.get_value(ctc_decode)[:, :]
+        print(y_test[0], out[0])
         if out.shape[1] == n_len:
             batch_acc += (y_test == out).all(axis=1).mean()
     return batch_acc / steps
