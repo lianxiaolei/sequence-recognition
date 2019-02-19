@@ -245,9 +245,9 @@ model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer='adam')
 
 print('-' * 30, 'starting', '-' * 30)
 print(time.asctime(time.localtime(time.time())))
-h = model.fit_generator(gen(128), steps_per_epoch=100, epochs=20,
+h = model.fit_generator(gen(128, gene=1), steps_per_epoch=100, epochs=20,
                         callbacks=[evaluator],
-                        validation_data=gen(128), validation_steps=20)
+                        validation_data=gen(128, gene=1), validation_steps=20)
 
 print(time.asctime(time.localtime(time.time())))
 print('training done!')
