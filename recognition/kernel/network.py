@@ -341,8 +341,8 @@ class CRNN():
     )
 
   def run(self):
-    for epoch in range(100):
-      for step in range(512):
+    for epoch in range(2048):
+      for step in range(32):
         inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
