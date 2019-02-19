@@ -342,8 +342,9 @@ class CRNN():
 
   def run(self):
     for epoch in range(2048):
+      inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       for step in range(32):
-        inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+        # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
         # current_step = tf.train.global_step(self.sess, self.global_step)
