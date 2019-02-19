@@ -10,7 +10,8 @@ def sparse_tuple_from(sequences, dtype=np.int32):
     """
     Create a sparse representention of x.
     Args:
-        sequences: a list of lists of type dtype where each element is a sequence
+        sequences: A list of lists of type dtype where each element is a sequence
+        dtype: Type of SparseTensor
     Returns:
         A tuple with (indices, values, shape)
     """

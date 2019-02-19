@@ -157,13 +157,8 @@ class CRNN():
         # 使用编辑距离计算准确率
         with tf.name_scope('accuracy'):
           #  time_major默认为True
-          # self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output,
-          #                                                             self.seq_len,
-          #                                                             merge_repeated=False)
-
-          self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output,
-                                                                      self.seq_len, merge_repeated=False,
-                                                                      top_paths=1)
+          self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
+                                                                      merge_repeated=False, top_paths=1)
 
           concat_indices = None
           concat_values = None
@@ -196,7 +191,7 @@ class CRNN():
                                            dense_shape=[first_dim, second_dim])
 
           edit_distance = tf.edit_distance(decoded_tensor, self.y, name='edit_distance')
-          self.acc_op = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_min(edit_distance), name='subtract')
+          self.acc_op = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_mean(edit_distance), name='subtract')
           # self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), edit_distance, name='subtract')
           # self.acc_op = tf.identity(self.acc)
 
