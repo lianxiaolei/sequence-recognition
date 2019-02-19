@@ -59,15 +59,10 @@ class CRNN():
 
     shape = x.get_shape().as_list()
     x = tf.reshape(x, shape=[-1, shape[1], shape[2] * shape[3]])
-    x = slim.fully_connected(x, self.num_class)
+    x = slim.fully_connected(x, self.rnn_units)
 
     # time major 模式需要的input shape:(max_time x batch_size x num_classes)
     x = tf.transpose(x, (1, 0, 2))
-
-    # 废弃的错误代码
-    # shape = x.get_shape().as_list()
-    # x = tf.reshape(x, shape=[shape[0], -1, shape[2] * shape[3]])
-    # x = slim.fully_connected(x, self.rnn_units - 1)
 
     cell = rnn.GRUCell(self.rnn_units, name='frnn', reuse=tf.AUTO_REUSE,
                        kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
