@@ -40,11 +40,13 @@ class CRNN():
       # print('Defind layer use kernel {} with name {}'.format('self.w%s0' % i, 'cnn0%s' % i))
       x = tf.nn.conv2d(x, eval('self.w%s0' % i), [1, 1, 1, 1],
                        padding='SAME', name='cnn0%s' % i)
+      x = tf.layers.batch_normalization(x, name='bn0%s' % i)
 
       tf.nn.relu(x)
 
       x = tf.nn.conv2d(x, eval('self.w%s1' % i), [1, 1, 1, 1],
                        padding='SAME', name='cnn1%s' % i)
+      x = tf.layers.batch_normalization(x, name='bn1%s' % i)
       tf.nn.relu(x)
 
       x = tf.nn.max_pool(x, [1, 2, 2, 1], strides=[1, 2, 2, 1],
@@ -67,8 +69,10 @@ class CRNN():
     # x = tf.reshape(x, shape=[shape[0], -1, shape[2] * shape[3]])
     # x = slim.fully_connected(x, self.rnn_units - 1)
 
-    cell = rnn.LSTMCell(self.rnn_units, use_peepholes=True, name='frnn')
-    back_cell = rnn.LSTMCell(self.rnn_units, use_peepholes=True, name='brnn')
+    cell = rnn.GRUCell(self.rnn_units, name='frnn', reuse=tf.AUTO_REUSE,
+                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    back_cell = rnn.GRUCell(self.rnn_units, name='brnn', reuse=tf.AUTO_REUSE,
+                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
 
     # initial_state_fw = cell.zero_state(shape[0], dtype=tf.float32)
     # initial_state_bw = back_cell.zero_state(shape[0], dtype=tf.float32)
@@ -81,6 +85,18 @@ class CRNN():
                                            # initial_state_bw,
                                            dtype=tf.float32, time_major=True)
     x = tf.add(x[0], x[1], name='add')
+
+    cell = rnn.GRUCell(self.rnn_units, name='frnn1', reuse=tf.AUTO_REUSE,
+                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    back_cell = rnn.GRUCell(self.rnn_units, name='brnn1', reuse=tf.AUTO_REUSE,
+                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+
+    x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
+                                           # initial_state_fw,
+                                           # initial_state_bw,
+                                           dtype=tf.float32, time_major=True)
+
+    x = tf.concat([x[0], x[1]], axis=-1, name='concat')
 
     max_timesteps, batch_s, _ = x.get_shape().as_list()
 
@@ -350,7 +366,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer("evaluate_every",
                               10, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
-                              100, "Rnn Units")
+                              128, "Rnn Units")
   crnn = CRNN(11)
   crnn.architecture(input_shape=[None, 400, 80, 1])
   print('Build model done!')
