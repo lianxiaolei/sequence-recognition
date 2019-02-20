@@ -206,13 +206,12 @@ class CRNN():
           # self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), edit_distance, name='subtract')
           # self.acc_op = tf.identity(self.acc)
 
+        self.global_step = tf.Variable(0, name='global_step', trainable=True)
         self.learning_rate = tf.train.exponential_decay(self.FLAGS.INITIAL_LEARNING_RATE,
                                                         self.FLAGS.global_step,
                                                         self.FLAGS.DECAY_STEPS,
                                                         self.FLAGS.LEARNING_RATE_DECAY_FACTOR,
                                                         staircase=True)
-
-        self.global_step = tf.Variable(0, name='global_step', trainable=True)
 
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
         self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
