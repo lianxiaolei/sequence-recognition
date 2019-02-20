@@ -89,7 +89,6 @@ class CRNN():
     cell = rnn.GRUCell(self.rnn_units, name='frnn1', reuse=tf.AUTO_REUSE,
                        kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
                        activation=tf.nn.tanh)
-
     back_cell = rnn.GRUCell(self.rnn_units, name='brnn1', reuse=tf.AUTO_REUSE,
                             kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
                             activation=tf.nn.tanh)
