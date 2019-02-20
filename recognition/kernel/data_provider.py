@@ -23,7 +23,7 @@ datagen = ImageDataGenerator(
 
 
 def plot(img, title):
-  plt.imshow(img)
+  plt.imshow(img[:, :, 0])
   plt.title(title)
   plt.show()
 
