@@ -206,7 +206,11 @@ class CRNN():
           # self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), edit_distance, name='subtract')
           # self.acc_op = tf.identity(self.acc)
 
-        self.learning_rate = 1e-2
+        self.learning_rate = tf.train.exponential_decay(self.FLAGS.INITIAL_LEARNING_RATE,
+                                                        self.FLAGS.global_step,
+                                                        self.FLAGS.DECAY_STEPS,
+                                                        self.FLAGS.LEARNING_RATE_DECAY_FACTOR,
+                                                        staircase=True)
 
         self.global_step = tf.Variable(0, name='global_step', trainable=True)
 
@@ -344,11 +348,11 @@ class CRNN():
         self.train_step(inputs, sparse_targets, seq_len)
         # current_step = tf.train.global_step(self.sess, self.global_step)
         # if current_step % self.FLAGS.evaluate_every == 0:
-          # print("\nAfter epoch %s Evaluation:" % epoch)
-          # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-          # self.dev_step(inputs, sparse_targets, seq_len)
-          # print('Evaluation Done\n')
-          # self._accuracy()
+        # print("\nAfter epoch %s Evaluation:" % epoch)
+        # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+        # self.dev_step(inputs, sparse_targets, seq_len)
+        # print('Evaluation Done\n')
+        # self._accuracy()
       print("\nAfter epoch %s Evaluation:" % epoch)
       inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       self.dev_step(inputs, sparse_targets, seq_len)
@@ -369,6 +373,12 @@ if __name__ == '__main__':
                               64, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
+  # 初始化学习速率
+  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
+  tf.app.flags.DEFINE_integer('INITIAL_LEARNING_RATE', 5000, 'INITIAL_LEARNING_RATE')
+  tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
+  tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.9, 'LEARNING_RATE_DECAY_FACTOR')
+
   crnn = CRNN(11)
   crnn.architecture(input_shape=[None, 400, 80, 1])
   print('Build model done!')
