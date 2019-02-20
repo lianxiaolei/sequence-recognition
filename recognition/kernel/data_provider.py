@@ -58,7 +58,7 @@ def get_sequence_img(chars):
   for i in range(1, len(chars)):
     x = np.hstack([x, get_img_by_char(chars[i])])
   x = cv2.resize(x, (400, 80))
-  x = skimage.util.random_noise(x, mode='gaussian', clip=True)
+  # x = skimage.util.random_noise(x, mode='gaussian', clip=True)
   return x
 
 
@@ -74,7 +74,10 @@ def get_next_batch(batch_size=128, gene=1):
 
     X[i] = tmp
     y[i] = [characters.find(x) for x in random_str]
-
+  # import matplotlib.pyplot as plt
+  # plt.imshow(X[0][:, :, 0])
+  # plt.title(''.join([str(item) for item in y[0]]))
+  # plt.show()
   i = 0
   XX = None
   yy = None
