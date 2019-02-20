@@ -14,7 +14,7 @@ from recognition.kernel.data_provider import *
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 400, 80, 10, len(characters) + 1
+width, height, n_len, n_class = 400, 40, 10, len(characters) + 1
 
 
 class CRNN():
@@ -388,8 +388,8 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
   tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.9, 'LEARNING_RATE_DECAY_FACTOR')
 
-  crnn = CRNN(11)
-  crnn.architecture(input_shape=[None, 400, 80, 1])
+  crnn = CRNN(n_class)
+  crnn.architecture(input_shape=[None, width, height, 1])
   print('Build model done!')
   crnn.run()
   print('Training done!')

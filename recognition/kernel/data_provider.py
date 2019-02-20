@@ -10,7 +10,7 @@ from recognition.kernel.sparse_parser import *
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 400, 80, 10, len(characters) + 1
+width, height, n_len, n_class = 400, 40, 10, len(characters) + 1
 
 datagen = ImageDataGenerator(
   rotation_range=0.4,
@@ -57,7 +57,7 @@ def get_sequence_img(chars):
   x = get_img_by_char(chars[0])
   for i in range(1, len(chars)):
     x = np.hstack([x, get_img_by_char(chars[i])])
-  x = cv2.resize(x, (400, 80))
+  x = cv2.resize(x, (width, height))
   # x = skimage.util.random_noise(x, mode='gaussian', clip=True)
   return x
 
