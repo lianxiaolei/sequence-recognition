@@ -206,7 +206,7 @@ class CRNN():
           # self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), edit_distance, name='subtract')
           # self.acc_op = tf.identity(self.acc)
 
-        self.learning_rate = 1e-3
+        self.learning_rate = 1e-2
 
         self.global_step = tf.Variable(0, name='global_step', trainable=True)
 
