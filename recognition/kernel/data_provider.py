@@ -74,10 +74,7 @@ def get_next_batch(batch_size=128, gene=1):
 
     X[i] = tmp
     y[i] = [characters.find(x) for x in random_str]
-  # import matplotlib.pyplot as plt
-  # plt.imshow(X[0][:, :, 0])
-  # plt.title(''.join([str(item) for item in y[0]]))
-  # plt.show()
+
   i = 0
   XX = None
   yy = None
