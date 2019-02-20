@@ -7,6 +7,7 @@ import numpy as np
 import skimage
 from keras.preprocessing.image import ImageDataGenerator
 from recognition.kernel.sparse_parser import *
+import matplotlib.pyplot as plt
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
@@ -19,6 +20,12 @@ datagen = ImageDataGenerator(
   shear_range=0.2,
   zoom_range=0.0,
   fill_mode='nearest')
+
+
+def plot(img, title):
+  plt.imshow(img)
+  plt.title(title)
+  plt.show()
 
 
 def generate():
@@ -74,6 +81,8 @@ def get_next_batch(batch_size=128, gene=1):
 
     X[i] = tmp
     y[i] = [characters.find(x) for x in random_str]
+
+    if i == 0: plot(tmp, random_str)
 
   i = 0
   XX = None
