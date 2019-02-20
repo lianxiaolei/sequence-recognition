@@ -85,7 +85,7 @@ class CRNN():
     #                                        # initial_state_bw,
     #                                        dtype=tf.float32, time_major=True)
 
-    x, _ = tf.nn.dynamic_rnn(cell, x, self.seq_len, type=tf.float32, time_major=True)
+    x, _ = tf.nn.dynamic_rnn(cell, x, self.seq_len, dtype=tf.float32, time_major=True)
 
     # x = tf.add(x[0], x[1], name='add')
 
