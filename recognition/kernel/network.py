@@ -208,7 +208,7 @@ class CRNN():
 
         self.global_step = tf.Variable(0, name='global_step', trainable=True)
         self.learning_rate = tf.train.exponential_decay(self.FLAGS.INITIAL_LEARNING_RATE,
-                                                        self.FLAGS.global_step,
+                                                        self.global_step,
                                                         self.FLAGS.DECAY_STEPS,
                                                         self.FLAGS.LEARNING_RATE_DECAY_FACTOR,
                                                         staircase=True)
