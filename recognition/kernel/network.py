@@ -71,9 +71,11 @@ class CRNN():
     # initial_state_bw = back_cell.zero_state(shape[0], dtype=tf.float32)
 
     cell = rnn.GRUCell(self.rnn_units, name='frnn', reuse=tf.AUTO_REUSE,
-                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                       activation=tf.nn.tanh)
     back_cell = rnn.GRUCell(self.rnn_units, name='brnn', reuse=tf.AUTO_REUSE,
-                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                            activation=tf.nn.tanh)
 
     # 构建双向叠加RNN
     print('双向RNN的输入(time_major)', x)
@@ -85,9 +87,12 @@ class CRNN():
     x = tf.add(x[0], x[1], name='add')
 
     cell = rnn.GRUCell(self.rnn_units, name='frnn1', reuse=tf.AUTO_REUSE,
-                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                       activation=tf.nn.tanh)
+
     back_cell = rnn.GRUCell(self.rnn_units, name='brnn1', reuse=tf.AUTO_REUSE,
-                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                            activation=tf.nn.tanh)
 
     # 构建双向拼接RNN
     x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
