@@ -51,7 +51,7 @@ class CRNN():
 
       x = tf.nn.max_pool(x, [1, 2, 2, 1], strides=[1, 2, 2, 1],
                          padding='VALID', name='cnn2%s' % i)
-      x = tf.nn.dropout(x, keep_prob=self.keep_prob)
+
     return x
 
   def head2tail(self, x):
@@ -59,18 +59,21 @@ class CRNN():
 
     shape = x.get_shape().as_list()
     x = tf.reshape(x, shape=[-1, shape[1], shape[2] * shape[3]])
-    x = slim.fully_connected(x, self.rnn_units)
+    x = slim.fully_connected(x, self.rnn_units,
+                             weights_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    x = tf.layers.batch_normalization(x, name='bn2')
+    x = tf.nn.relu(x)
 
     # time major 模式需要的input shape:(max_time x batch_size x num_classes)
     x = tf.transpose(x, (1, 0, 2))
+
+    # initial_state_fw = cell.zero_state(shape[0], dtype=tf.float32)
+    # initial_state_bw = back_cell.zero_state(shape[0], dtype=tf.float32)
 
     cell = rnn.GRUCell(self.rnn_units, name='frnn', reuse=tf.AUTO_REUSE,
                        kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     back_cell = rnn.GRUCell(self.rnn_units, name='brnn', reuse=tf.AUTO_REUSE,
                             kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-
-    # initial_state_fw = cell.zero_state(shape[0], dtype=tf.float32)
-    # initial_state_bw = back_cell.zero_state(shape[0], dtype=tf.float32)
 
     # 构建双向叠加RNN
     print('双向RNN的输入(time_major)', x)
@@ -86,12 +89,15 @@ class CRNN():
     back_cell = rnn.GRUCell(self.rnn_units, name='brnn1', reuse=tf.AUTO_REUSE,
                             kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
 
+    # 构建双向拼接RNN
     x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
                                            # initial_state_fw,
                                            # initial_state_bw,
                                            dtype=tf.float32, time_major=True)
 
     x = tf.concat([x[0], x[1]], axis=-1, name='concat')
+
+    x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout')
 
     max_timesteps, batch_s, _ = x.get_shape().as_list()
 
