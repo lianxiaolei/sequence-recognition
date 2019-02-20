@@ -73,36 +73,36 @@ class CRNN():
     cell = rnn.GRUCell(self.rnn_units, name='frnn', reuse=tf.AUTO_REUSE,
                        kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
                        activation=tf.nn.tanh)
-    # back_cell = rnn.GRUCell(self.rnn_units, name='brnn', reuse=tf.AUTO_REUSE,
-    #                         kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-    #                         activation=tf.nn.tanh)
+    back_cell = rnn.GRUCell(self.rnn_units, name='brnn', reuse=tf.AUTO_REUSE,
+                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                            activation=tf.nn.tanh)
 
     # 构建双向叠加RNN
     print('双向RNN的输入(time_major)', x)
     # print('双向RNN的参数(time_major)', initial_state_fw)
-    # x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
-    #                                        # initial_state_fw,
-    #                                        # initial_state_bw,
-    #                                        dtype=tf.float32, time_major=True)
+    x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
+                                           # initial_state_fw,
+                                           # initial_state_bw,
+                                           dtype=tf.float32, time_major=True)
 
-    x, _ = tf.nn.dynamic_rnn(cell, x, self.seq_len, dtype=tf.float32, time_major=True)
+    # x, _ = tf.nn.dynamic_rnn(cell, x, self.seq_len, dtype=tf.float32, time_major=True)
 
-    # x = tf.add(x[0], x[1], name='add')
+    x = tf.add(x[0], x[1], name='add')
 
-    # cell = rnn.GRUCell(self.rnn_units, name='frnn1', reuse=tf.AUTO_REUSE,
-    #                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-    #                    activation=tf.nn.tanh)
-    # back_cell = rnn.GRUCell(self.rnn_units, name='brnn1', reuse=tf.AUTO_REUSE,
-    #                         kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-    #                         activation=tf.nn.tanh)
-    #
-    # # 构建双向拼接RNN
-    # x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
-    #                                        # initial_state_fw,
-    #                                        # initial_state_bw,
-    #                                        dtype=tf.float32, time_major=True)
+    cell = rnn.GRUCell(self.rnn_units, name='frnn1', reuse=tf.AUTO_REUSE,
+                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                       activation=tf.nn.tanh)
+    back_cell = rnn.GRUCell(self.rnn_units, name='brnn1', reuse=tf.AUTO_REUSE,
+                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                            activation=tf.nn.tanh)
 
-    # x = tf.concat([x[0], x[1]], axis=-1, name='concat')
+    # 构建双向拼接RNN
+    x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
+                                           # initial_state_fw,
+                                           # initial_state_bw,
+                                           dtype=tf.float32, time_major=True)
+
+    x = tf.concat([x[0], x[1]], axis=-1, name='concat')
 
     x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout')
 
