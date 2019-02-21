@@ -61,45 +61,46 @@ class CRNN():
     x = tf.reshape(x, shape=[-1, shape[1], shape[2] * shape[3]])
     x = slim.fully_connected(x, self.rnn_units,
                              weights_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    x = tf.layers.batch_normalization(x, name='bn2')
+    # x = tf.layers.batch_normalization(x, name='bn2')
     x = tf.nn.relu(x)
 
+    # 构建双向叠加RNN
     # initial_state_fw = cell.zero_state(shape[0], dtype=tf.float32)
     # initial_state_bw = back_cell.zero_state(shape[0], dtype=tf.float32)
-
-    cell = rnn.GRUCell(self.rnn_units, name='frnn', reuse=tf.AUTO_REUSE,
-                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                       activation=tf.nn.tanh)
-    back_cell = rnn.GRUCell(self.rnn_units, name='brnn', reuse=tf.AUTO_REUSE,
-                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                            activation=tf.nn.tanh)
+    #
+    # cell = rnn.GRUCell(self.rnn_units, name='frnn', reuse=tf.AUTO_REUSE,
+    #                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+    #                    activation=tf.nn.tanh)
+    # back_cell = rnn.GRUCell(self.rnn_units, name='brnn', reuse=tf.AUTO_REUSE,
+    #                         kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+    #                         activation=tf.nn.tanh)
+    #
+    # x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
+    #                                        dtype=tf.float32, time_major=False)
+    #
+    # x = tf.add(x[0], x[1], name='add')
+    #
+    # cell = rnn.GRUCell(self.rnn_units, name='frnn1', reuse=tf.AUTO_REUSE,
+    #                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+    #                    activation=tf.nn.tanh)
+    # back_cell = rnn.GRUCell(self.rnn_units, name='brnn1', reuse=tf.AUTO_REUSE,
+    #                         kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+    #                         activation=tf.nn.tanh)
+    #
+    # # 构建双向拼接RNN
+    # x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
+    #                                        # initial_state_fw,
+    #                                        # initial_state_bw,
+    #                                        dtype=tf.float32, time_major=False)
+    #
+    # x = tf.concat([x[0], x[1]], axis=-1, name='concat')
 
     # 构建双向叠加RNN
-    print('双向RNN的输入(time_major)', x)
-    # print('双向RNN的参数(time_major)', initial_state_fw)
-    x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
-                                           # initial_state_fw,
-                                           # initial_state_bw,
-                                           dtype=tf.float32, time_major=False)
-
-    # x, _ = tf.nn.dynamic_rnn(cell, x, self.seq_len, dtype=tf.float32, time_major=True)
-
-    x = tf.add(x[0], x[1], name='add')
-
-    cell = rnn.GRUCell(self.rnn_units, name='frnn1', reuse=tf.AUTO_REUSE,
-                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                       activation=tf.nn.tanh)
-    back_cell = rnn.GRUCell(self.rnn_units, name='brnn1', reuse=tf.AUTO_REUSE,
-                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                            activation=tf.nn.tanh)
-
-    # 构建双向拼接RNN
-    x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
-                                           # initial_state_fw,
-                                           # initial_state_bw,
-                                           dtype=tf.float32, time_major=False)
-
-    x = tf.concat([x[0], x[1]], axis=-1, name='concat')
+    fw_cell_list = [rnn.BasicLSTMCell(nh, forget_bias=1.0) for nh in [self.rnn_units] * 8]
+    # Backward direction cells
+    bw_cell_list = [rnn.BasicLSTMCell(nh, forget_bias=1.0) for nh in [self.rnn_units] * 8]
+    x, _, _ = rnn.stack_bidirectional_dynamic_rnn(
+      fw_cell_list, bw_cell_list, x, sequence_length=self.seq_len, dtype=tf.float32)
 
     x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout')
 
@@ -149,7 +150,8 @@ class CRNN():
           self.__dict__['w%s%s' % (i, j)] = self._init_variable(kernel_shape, name='conv_w%s%s' % (i, j))
 
     with tf.name_scope('architecture'):
-      self.head = self.image2head(self.X)
+      # self.head = self.image2head(self.X)
+      self.head = self.X
       self.output = self.head2tail(self.head)  # self.output == self.tail
 
   def architecture(self, input_shape, lr=1e-2, epoch=1e1, mode='train'):
@@ -165,6 +167,7 @@ class CRNN():
 
       with self.sess.as_default():
         self._build_network(input_shape, lr=lr, epoch=epoch, mode=mode)
+        [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
 
         # 计算误差
         with tf.name_scope('loss'):
@@ -253,9 +256,9 @@ class CRNN():
         true_numer = true_numer + 1
     print("Test Accuracy:", true_numer * 1.0 / len(original_list))
 
-  def _accuracy(self):
+  def _accuracy(self, test_inputs, test_targets, test_seq_len):
     # test_inputs, test_targets, test_seq_len = get_next_batch(self.FLAGS.batch_size)
-    test_inputs, test_targets, test_seq_len = get_next_batch(1)
+    # test_inputs, test_targets, test_seq_len = get_next_batch(1)
     print('test sequence length:', test_seq_len)
     # decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
     #                                                   test_seq_len,
@@ -354,11 +357,11 @@ class CRNN():
     )
 
   def run(self):
-    inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+    # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
     for epoch in range(128):
       # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       for step in range(32):
-        # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+        inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
         current_step = tf.train.global_step(self.sess, self.global_step)
@@ -367,7 +370,7 @@ class CRNN():
           # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
           self.dev_step(inputs, sparse_targets, seq_len)
           print('Evaluation Done\n')
-          self._accuracy()
+          self._accuracy(inputs, sparse_targets, seq_len)
       # print("\nAfter epoch %s Evaluation:" % epoch)
       # # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       # self.dev_step(inputs, sparse_targets, seq_len)
@@ -387,7 +390,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer("evaluate_every",
                               10, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
-                              25, "Rnn Units")
+                              200, "Rnn Units")
   # 初始化学习速率
   tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
   tf.app.flags.DEFINE_integer('DECAY_STEPS', 500, 'DECAY_STEPS')
