@@ -183,7 +183,7 @@ class CRNN():
           #  time_major默认为True
           # self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
           #                                                             merge_repeated=False, top_paths=1)
-          decoded, log_prob = tf.nn.ctc_greedy_decoder(self.output, self.seq_len)
+          self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(self.output, self.seq_len)
 
           concat_indices = None
           concat_values = None
