@@ -354,23 +354,23 @@ class CRNN():
 
   def run(self):
     for epoch in range(128):
-      inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-      for step in range(64):
-        # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      for step in range(128):
+        inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
-        # current_step = tf.train.global_step(self.sess, self.global_step)
-        # if current_step % self.FLAGS.evaluate_every == 0:
-        # print("\nAfter epoch %s Evaluation:" % epoch)
-        # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-        # self.dev_step(inputs, sparse_targets, seq_len)
-        # print('Evaluation Done\n')
-        # self._accuracy()
-      print("\nAfter epoch %s Evaluation:" % epoch)
-      # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-      self.dev_step(inputs, sparse_targets, seq_len)
-      print('Evaluation Done\n')
-      self._accuracy()
+        current_step = tf.train.global_step(self.sess, self.global_step)
+        if current_step % self.FLAGS.evaluate_every == 0:
+          print("\nAfter epoch %s Evaluation:" % epoch)
+          inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+          self.dev_step(inputs, sparse_targets, seq_len)
+          print('Evaluation Done\n')
+          self._accuracy()
+      # print("\nAfter epoch %s Evaluation:" % epoch)
+      # # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      # self.dev_step(inputs, sparse_targets, seq_len)
+      # print('Evaluation Done\n')
+      # self._accuracy()
 
 
 if __name__ == '__main__':
