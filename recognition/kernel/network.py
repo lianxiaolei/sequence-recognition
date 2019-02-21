@@ -14,7 +14,7 @@ from recognition.kernel.data_provider import *
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 400, 40, 10, len(characters) + 2
+width, height, n_len, n_class = 200, 20, 10, len(characters) + 2
 
 
 class CRNN():
@@ -388,7 +388,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             0.75, "Dropout keep probability (default: 0.5)")
   tf.app.flags.DEFINE_integer("evaluate_every",
-                              64, "Evaluate model on dev set after this many steps (default: 100)")
+                              256, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   # 初始化学习速率

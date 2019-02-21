@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 400, 40, 10, len(characters) + 2
+width, height, n_len, n_class = 200, 20, 10, len(characters) + 2
 
 datagen = ImageDataGenerator(
   rotation_range=0.4,
