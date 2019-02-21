@@ -181,8 +181,9 @@ class CRNN():
         # 使用编辑距离计算准确率
         with tf.name_scope('accuracy'):
           #  time_major默认为True
-          self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
-                                                                      merge_repeated=False, top_paths=1)
+          # self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
+          #                                                             merge_repeated=False, top_paths=1)
+          decoded, log_prob = tf.nn.ctc_greedy_decoder(self.output, self.seq_len)
 
           concat_indices = None
           concat_values = None
