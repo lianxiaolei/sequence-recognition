@@ -82,8 +82,6 @@ def get_next_batch(batch_size=128, gene=1):
     X[i] = tmp
     y[i] = [characters.find(x) for x in random_str]
 
-    if i == 0: plot(tmp, random_str)
-
   i = 0
   XX = None
   yy = None
