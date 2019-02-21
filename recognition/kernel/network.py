@@ -171,7 +171,7 @@ class CRNN():
         # 计算误差
         with tf.name_scope('loss'):
           #  time_major默认为True
-          self.loss = tf.reduce_sum(
+          self.loss = tf.reduce_mean(
             tf.nn.ctc_loss(labels=self.y, inputs=self.output,
                            sequence_length=self.seq_len, preprocess_collapse_repeated=True))
 
@@ -258,7 +258,8 @@ class CRNN():
     print("Test Accuracy:", true_numer * 1.0 / len(original_list))
 
   def _accuracy(self):
-    test_inputs, test_targets, test_seq_len = get_next_batch(self.FLAGS.batch_size)
+    # test_inputs, test_targets, test_seq_len = get_next_batch(self.FLAGS.batch_size)
+    test_inputs, test_targets, test_seq_len = get_next_batch(1)
     print('test sequence length:', test_seq_len)
     # decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
     #                                                   test_seq_len,
