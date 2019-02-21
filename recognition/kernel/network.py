@@ -227,7 +227,6 @@ class CRNN():
                                                         staircase=True)
 
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
-        self.optimizer.minimize()
         self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
         self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step)
 
