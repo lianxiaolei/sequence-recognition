@@ -171,14 +171,14 @@ class CRNN():
           #  time_major默认为True
           self.loss = tf.reduce_mean(
             tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-                           sequence_length=self.seq_len, preprocess_collapse_repeated=False))
+                           sequence_length=self.seq_len, preprocess_collapse_repeated=True))
 
         # 使用编辑距离计算准确率
         with tf.name_scope('accuracy'):
           #  time_major默认为True
-          # self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
-          #                                                             merge_repeated=False, top_paths=1)
-          self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(self.output, self.seq_len)
+          self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
+                                                                      merge_repeated=False, top_paths=1)
+          # self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(self.output, self.seq_len)
 
           concat_indices = None
           concat_values = None
@@ -237,6 +237,7 @@ class CRNN():
   def calc_accuracy(self, decode_list, test_target):
     original_list = decode_sparse_tensor(test_target)
     detected_list = decode_sparse_tensor(decode_list)
+    # detected_list = self.sess.run(tf.sparse_to_dense(decode_list))
     true_numer = 0
 
     if len(original_list) != len(detected_list):
@@ -353,16 +354,17 @@ class CRNN():
     )
 
   def run(self):
+    inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
     for epoch in range(128):
       # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       for step in range(32):
-        inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+        # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
         current_step = tf.train.global_step(self.sess, self.global_step)
         if current_step % self.FLAGS.evaluate_every == 0:
           print("\nAfter epoch %s Evaluation:" % epoch)
-          inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+          # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
           self.dev_step(inputs, sparse_targets, seq_len)
           print('Evaluation Done\n')
           self._accuracy()
@@ -385,7 +387,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer("evaluate_every",
                               10, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
-                              128, "Rnn Units")
+                              25, "Rnn Units")
   # 初始化学习速率
   tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
   tf.app.flags.DEFINE_integer('DECAY_STEPS', 500, 'DECAY_STEPS')
