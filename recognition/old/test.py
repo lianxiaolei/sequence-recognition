@@ -41,5 +41,13 @@ class CRNN():
 
 
 if __name__ == '__main__':
-  cr = CRNN()
-  print(cr.__dict__)
+  from ocr.prediction.single_num_pred import SingleNumTypescriptPrediction
+  stp = SingleNumTypescriptPrediction()
+  print('---')
+  import numpy as np
+  img = np.random.randn(100, 20)
+  print(stp.predict(img, with_prep=True))
+  # cr = CRNN()
+  # print(cr.__dict__)
+  import tensorflow as tf
+  tf.train.AdamOptimizer

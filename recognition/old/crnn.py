@@ -125,7 +125,9 @@ def gen(batch_size=128, gene=4):
 
             X[i] = tmp
             y[i] = [characters.find(x) for x in random_str]
-
+        import matplotlib.pyplot as plt
+        plt.imshow(tmp[:, :, 0])
+        plt.show()
         i = 0
         XX = None
         yy = None

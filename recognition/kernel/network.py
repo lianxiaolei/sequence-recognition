@@ -14,7 +14,7 @@ from recognition.kernel.data_provider import *
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 400, 40, 10, len(characters) + 1
+width, height, n_len, n_class = 400, 40, 10, len(characters) + 2
 
 
 class CRNN():
@@ -106,7 +106,7 @@ class CRNN():
 
     x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout')
 
-    max_timesteps, batch_s, _ = x.get_shape().as_list()
+    # max_timesteps, batch_s, _ = x.get_shape().as_list()
 
     x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
 
@@ -227,6 +227,7 @@ class CRNN():
                                                         staircase=True)
 
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
+        self.optimizer.minimize()
         self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
         self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step)
 
@@ -353,9 +354,9 @@ class CRNN():
 
   def run(self):
     for epoch in range(128):
-      # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-      for step in range(512):
-        inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      for step in range(64):
+        # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
         # current_step = tf.train.global_step(self.sess, self.global_step)
@@ -366,7 +367,7 @@ class CRNN():
         # print('Evaluation Done\n')
         # self._accuracy()
       print("\nAfter epoch %s Evaluation:" % epoch)
-      inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       self.dev_step(inputs, sparse_targets, seq_len)
       print('Evaluation Done\n')
       self._accuracy()
