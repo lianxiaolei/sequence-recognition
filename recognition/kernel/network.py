@@ -80,7 +80,7 @@ class CRNN():
     x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
                                            # initial_state_fw,
                                            # initial_state_bw,
-                                           dtype=tf.float32)
+                                           dtype=tf.float32, time_major=False)
 
     # x, _ = tf.nn.dynamic_rnn(cell, x, self.seq_len, dtype=tf.float32, time_major=True)
 
