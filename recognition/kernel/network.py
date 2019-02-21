@@ -97,7 +97,7 @@ class CRNN():
     x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
                                            # initial_state_fw,
                                            # initial_state_bw,
-                                           dtype=tf.float32, time_major=True)
+                                           dtype=tf.float32, time_major=False)
 
     x = tf.concat([x[0], x[1]], axis=-1, name='concat')
 
