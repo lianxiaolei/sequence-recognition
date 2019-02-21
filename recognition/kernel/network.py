@@ -383,7 +383,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
-                              256, "Batch Size (default: 64)")
+                              64, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             0.75, "Dropout keep probability (default: 0.5)")
   tf.app.flags.DEFINE_integer("evaluate_every",
