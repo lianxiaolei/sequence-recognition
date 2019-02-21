@@ -383,7 +383,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             0.75, "Dropout keep probability (default: 0.5)")
   tf.app.flags.DEFINE_integer("evaluate_every",
-                              32, "Evaluate model on dev set after this many steps (default: 100)")
+                              10, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   # 初始化学习速率
