@@ -259,9 +259,13 @@ class CRNN():
   def _accuracy(self):
     test_inputs, test_targets, test_seq_len = get_next_batch(self.FLAGS.batch_size)
     print('test sequence length:', test_seq_len)
-    decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
-                                                      test_seq_len,
-                                                      merge_repeated=False)
+    # decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
+    #                                                   test_seq_len,
+    #                                                   merge_repeated=False)
+
+    decoded, log_prob = tf.nn.ctc_greedy_decoder(self.output,
+                                                 test_seq_len)
+
     test_feed = {self.X: test_inputs,
                  self.y: test_targets,
                  self.seq_len: test_seq_len,
