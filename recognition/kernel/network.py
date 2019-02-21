@@ -171,11 +171,7 @@ class CRNN():
           #  time_major默认为True
           self.loss = tf.reduce_mean(
             tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-                           sequence_length=self.seq_len, preprocess_collapse_repeated=True))
-
-          # self.loss = tf.reduce_mean(
-          #   tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-          #                  sequence_length=self.seq_len))
+                           sequence_length=self.seq_len, preprocess_collapse_repeated=False))
 
         # 使用编辑距离计算准确率
         with tf.name_scope('accuracy'):
@@ -383,7 +379,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
-                              64, "Batch Size (default: 64)")
+                              32, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             0.75, "Dropout keep probability (default: 0.5)")
   tf.app.flags.DEFINE_integer("evaluate_every",
