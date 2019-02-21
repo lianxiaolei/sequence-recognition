@@ -64,9 +64,6 @@ class CRNN():
     x = tf.layers.batch_normalization(x, name='bn2')
     x = tf.nn.relu(x)
 
-    # time major 模式需要的input shape:(max_time x batch_size x num_classes)
-    x = tf.transpose(x, (1, 0, 2))
-
     # initial_state_fw = cell.zero_state(shape[0], dtype=tf.float32)
     # initial_state_bw = back_cell.zero_state(shape[0], dtype=tf.float32)
 
@@ -83,7 +80,7 @@ class CRNN():
     x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
                                            # initial_state_fw,
                                            # initial_state_bw,
-                                           dtype=tf.float32, time_major=True)
+                                           dtype=tf.float32)
 
     # x, _ = tf.nn.dynamic_rnn(cell, x, self.seq_len, dtype=tf.float32, time_major=True)
 
@@ -106,9 +103,10 @@ class CRNN():
 
     x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout')
 
-    # max_timesteps, batch_s, _ = x.get_shape().as_list()
-
     x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
+
+    # time major 模式需要的input shape:(max_time x batch_size x num_classes)
+    x = tf.transpose(x, (1, 0, 2))
 
     return x
 
@@ -384,11 +382,11 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
-                              16, "Batch Size (default: 64)")
+                              256, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             0.75, "Dropout keep probability (default: 0.5)")
   tf.app.flags.DEFINE_integer("evaluate_every",
-                              256, "Evaluate model on dev set after this many steps (default: 100)")
+                              32, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   # 初始化学习速率
