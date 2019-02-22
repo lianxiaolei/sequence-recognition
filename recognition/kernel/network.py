@@ -14,7 +14,7 @@ from recognition.kernel.data_provider import *
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 128, 16, 1, len(characters) + 1
+width, height, n_len, n_class = 128, 16, 8, len(characters) + 1
 
 
 class CRNN():
@@ -60,7 +60,7 @@ class CRNN():
     x = tf.reshape(x, shape=[-1, shape[1], shape[2] * shape[3]])
     x = slim.fully_connected(x, self.rnn_units,
                              weights_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    # x = tf.layers.batch_normalization(x, name='bn2')
+    x = tf.layers.batch_normalization(x, name='bn2')
     x = tf.nn.relu(x)
 
     # 构建双向叠加RNN
@@ -383,13 +383,13 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
-                              32, "Batch Size (default: 64)")
+                              128, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             0.85, "Dropout keep probability (default: 0.5)")
   tf.app.flags.DEFINE_integer("evaluate_every",
                               10, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
-                              int(width / 8), "Rnn Units")
+                              128, "Rnn Units")
   # 初始化学习速率
   tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
   tf.app.flags.DEFINE_integer('DECAY_STEPS', 5000, 'DECAY_STEPS')
