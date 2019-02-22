@@ -50,7 +50,7 @@ class CRNN():
 
       x = tf.nn.max_pool(x, [1, 2, 2, 1], strides=[1, 2, 2, 1],
                          padding='VALID', name='cnn2%s' % i)
-
+    x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout')
     return x
 
   def head2tail(self, x):
@@ -98,12 +98,13 @@ class CRNN():
     fw_cell_list = [rnn.GRUCell(nh, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
                     for nh in [self.rnn_units] * 2]
     # Backward direction cells
-    bw_cell_list = [rnn.GRUCell(nh, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-                    for nh in [self.rnn_units] * 2]
-    x, _, _ = rnn.stack_bidirectional_dynamic_rnn(
-      fw_cell_list, bw_cell_list, x, sequence_length=self.seq_len, dtype=tf.float32)
+    # bw_cell_list = [rnn.GRUCell(nh, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    #                 for nh in [self.rnn_units] * 2]
+    # x, _, _ = rnn.stack_bidirectional_dynamic_rnn(
+    #   fw_cell_list, bw_cell_list, x, sequence_length=self.seq_len, dtype=tf.float32)
 
-    x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout')
+    cell = rnn.MultiRNNCell(fw_cell_list)
+    x = tf.nn.dynamic_rnn(cell, x, self.seq_len, dtype=tf.float32)
 
     x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
 
