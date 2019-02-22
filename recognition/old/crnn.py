@@ -70,7 +70,7 @@ def make_parallel(model, gpu_count):
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 400, 80, 10, len(characters) + 1
+width, height, n_len, n_class = 128, 16, 8, len(characters) + 1
 
 
 def generate():
