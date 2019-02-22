@@ -95,9 +95,9 @@ class CRNN():
     # x = tf.concat([x[0], x[1]], axis=-1, name='concat')
 
     # 构建双向叠加RNN
-    fw_cell_list = [rnn.BasicLSTMCell(nh, forget_bias=1.0) for nh in [self.rnn_units] * 4]
+    fw_cell_list = [rnn.BasicLSTMCell(nh, forget_bias=1.0) for nh in [self.rnn_units] * 2]
     # Backward direction cells
-    bw_cell_list = [rnn.BasicLSTMCell(nh, forget_bias=1.0) for nh in [self.rnn_units] * 4]
+    bw_cell_list = [rnn.BasicLSTMCell(nh, forget_bias=1.0) for nh in [self.rnn_units] * 2]
     x, _, _ = rnn.stack_bidirectional_dynamic_rnn(
       fw_cell_list, bw_cell_list, x, sequence_length=self.seq_len, dtype=tf.float32)
 
@@ -106,7 +106,7 @@ class CRNN():
     x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
 
     # time major 模式需要的input shape:(max_time x batch_size x num_classes)
-    # x = tf.transpose(x, (1, 0, 2))
+    x = tf.transpose(x, (1, 0, 2))
 
     return x
 
@@ -173,9 +173,7 @@ class CRNN():
           #  time_major默认为True
           self.loss = tf.reduce_mean(
             tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-                           sequence_length=self.seq_len,
-                           preprocess_collapse_repeated=True,
-                           time_major=False))
+                           sequence_length=self.seq_len, preprocess_collapse_repeated=True))
 
         # 使用编辑距离计算准确率
         with tf.name_scope('accuracy'):
