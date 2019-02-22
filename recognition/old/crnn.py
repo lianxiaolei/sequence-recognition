@@ -198,10 +198,10 @@ datagen = ImageDataGenerator(
 input_tensor = Input((width, height, 1))
 x = input_tensor
 for i in range(3):
-    x = Conv2D(32 * 2 ** i, (3, 3), kernel_initializer='he_normal')(x)
+    x = Conv2D(32 * 2 ** i, (3, 3), kernel_initializer='he_normal', padding='SAME')(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x = Conv2D(32 * 2 ** i, (3, 3), kernel_initializer='he_normal')(x)
+    x = Conv2D(32 * 2 ** i, (3, 3), kernel_initializer='he_normal', padding='SAME')(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = MaxPooling2D(pool_size=(2, 2))(x)
