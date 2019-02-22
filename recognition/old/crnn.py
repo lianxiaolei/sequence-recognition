@@ -108,7 +108,7 @@ def get_sequence_img(chars):
     x = get_img_by_char(chars[0])
     for i in range(1, len(chars)):
         x = np.hstack([x, get_img_by_char(chars[i])])
-    x = cv2.resize(x, (400, 80))
+    x = cv2.resize(x, (width, height))
     return x
 
 
