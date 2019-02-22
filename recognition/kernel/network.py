@@ -95,9 +95,9 @@ class CRNN():
     # x = tf.concat([x[0], x[1]], axis=-1, name='concat')
 
     # 构建双向叠加RNN
-    fw_cell_list = [rnn.BasicLSTMCell(nh, forget_bias=1.0) for nh in [self.rnn_units] * 2]
+    fw_cell_list = [rnn.GRUCell(nh, forget_bias=1.0) for nh in [self.rnn_units] * 2]
     # Backward direction cells
-    bw_cell_list = [rnn.BasicLSTMCell(nh, forget_bias=1.0) for nh in [self.rnn_units] * 2]
+    bw_cell_list = [rnn.GRUCell(nh, forget_bias=1.0) for nh in [self.rnn_units] * 2]
     x, _, _ = rnn.stack_bidirectional_dynamic_rnn(
       fw_cell_list, bw_cell_list, x, sequence_length=self.seq_len, dtype=tf.float32)
 
