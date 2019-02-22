@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 200, 20, 10, len(characters) + 2
+width, height, n_len, n_class = 128, 16, 10, len(characters) + 2
 
 datagen = ImageDataGenerator(
   rotation_range=0.4,
@@ -81,7 +81,7 @@ def get_next_batch(batch_size=128, gene=1):
 
     X[i] = tmp
     y[i] = [characters.find(x) for x in random_str]
-
+  plot(X[0], y[0])
   i = 0
   XX = None
   yy = None

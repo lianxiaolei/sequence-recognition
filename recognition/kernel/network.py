@@ -14,7 +14,7 @@ from recognition.kernel.data_provider import *
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 200, 20, 10, len(characters) + 2
+width, height, n_len, n_class = 128, 16, 10, len(characters) + 2
 
 
 class CRNN():
@@ -41,7 +41,6 @@ class CRNN():
       x = tf.nn.conv2d(x, eval('self.w%s0' % i), [1, 1, 1, 1],
                        padding='SAME', name='cnn0%s' % i)
       x = tf.layers.batch_normalization(x, name='bn0%s' % i)
-
       tf.nn.relu(x)
 
       x = tf.nn.conv2d(x, eval('self.w%s1' % i), [1, 1, 1, 1],
@@ -150,8 +149,8 @@ class CRNN():
           self.__dict__['w%s%s' % (i, j)] = self._init_variable(kernel_shape, name='conv_w%s%s' % (i, j))
 
     with tf.name_scope('architecture'):
-      # self.head = self.image2head(self.X)
-      self.head = self.X
+      self.head = self.image2head(self.X)
+      # self.head = self.X
       self.output = self.head2tail(self.head)  # self.output == self.tail
 
   def architecture(self, input_shape, lr=1e-2, epoch=1e1, mode='train'):
@@ -386,11 +385,11 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer("batch_size",
                               32, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
-                            0.75, "Dropout keep probability (default: 0.5)")
+                            0.85, "Dropout keep probability (default: 0.5)")
   tf.app.flags.DEFINE_integer("evaluate_every",
                               10, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
-                              200, "Rnn Units")
+                              width / 8, "Rnn Units")
   # 初始化学习速率
   tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
   tf.app.flags.DEFINE_integer('DECAY_STEPS', 5000, 'DECAY_STEPS')
