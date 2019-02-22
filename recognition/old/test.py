@@ -40,14 +40,11 @@ class CRNN():
     return input_shape
 
 
+def tt(x):
+  x += 10
+  return x
+
+
 if __name__ == '__main__':
-  from ocr.prediction.single_num_pred import SingleNumTypescriptPrediction
-  stp = SingleNumTypescriptPrediction()
-  print('---')
-  import numpy as np
-  img = np.random.randn(100, 20)
-  print(stp.predict(img, with_prep=True))
-  # cr = CRNN()
-  # print(cr.__dict__)
-  import tensorflow as tf
-  tf.train.AdamOptimizer
+  x = 1
+  print(tt(x))

@@ -36,17 +36,17 @@ class CRNN():
     return tf.Variable(tf.random_normal(shape, stddev=0.01), name=name)
 
   def image2head(self, x):
-    for i in range(3):
+    for i in range(2):
       # print('Defind layer use kernel {} with name {}'.format('self.w%s0' % i, 'cnn0%s' % i))
       x = tf.nn.conv2d(x, eval('self.w%s0' % i), [1, 1, 1, 1],
                        padding='SAME', name='cnn0%s' % i)
       x = tf.layers.batch_normalization(x, name='bn0%s' % i)
       tf.nn.relu(x)
 
-      x = tf.nn.conv2d(x, eval('self.w%s1' % i), [1, 1, 1, 1],
-                       padding='SAME', name='cnn1%s' % i)
-      x = tf.layers.batch_normalization(x, name='bn1%s' % i)
-      tf.nn.relu(x)
+      # x = tf.nn.conv2d(x, eval('self.w%s1' % i), [1, 1, 1, 1],
+      #                  padding='SAME', name='cnn1%s' % i)
+      # x = tf.layers.batch_normalization(x, name='bn1%s' % i)
+      # tf.nn.relu(x)
 
       x = tf.nn.max_pool(x, [1, 2, 2, 1], strides=[1, 2, 2, 1],
                          padding='VALID', name='cnn2%s' % i)
@@ -158,85 +158,83 @@ class CRNN():
 
   def architecture(self, input_shape, lr=1e-2, epoch=1e1, mode='train'):
     # 构建图
-    with tf.Graph().as_default():
-      self.FLAGS = tf.flags.FLAGS
+    # with tf.Graph().as_default():
+    self.FLAGS = tf.flags.FLAGS
 
-      config = tf.ConfigProto(
-        allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
-        log_device_placement=self.FLAGS.log_device_placement)
+    config = tf.ConfigProto(
+      allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
+      log_device_placement=self.FLAGS.log_device_placement)
 
-      self.sess = tf.Session(config=config)
+    self.sess = tf.Session(config=config)
 
-      with self.sess.as_default():
-        self._build_network(input_shape, lr=lr, epoch=epoch, mode=mode)
-        # [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
+    with self.sess.as_default():
+      self._build_network(input_shape, lr=lr, epoch=epoch, mode=mode)
+      # [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
 
-        # 使用编辑距离计算准确率
-        with tf.name_scope('accuracy'):
-          # 计算误差
-          #  time_major默认为True
-          self.loss = tf.reduce_mean(
-            tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-                           sequence_length=self.seq_len, preprocess_collapse_repeated=True))
+      # 使用编辑距离计算准确率
+      with tf.name_scope('accuracy'):
+        # 计算误差
+        #  time_major默认为True
+        self.loss = tf.reduce_mean(
+          tf.nn.ctc_loss(labels=self.y, inputs=self.output,
+                         sequence_length=self.seq_len, preprocess_collapse_repeated=True))
 
-          #  time_major默认为True
-          self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
-                                                                      merge_repeated=False, top_paths=1)
-          # self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(self.output, self.seq_len)
+        #  time_major默认为True
+        self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
+                                                                    merge_repeated=False, top_paths=1)
+        # self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(self.output, self.seq_len)
 
-          concat_indices = None
-          concat_values = None
-          accelerate_indices = 0
-          print('Decoded length:', len(self.decoded))
-          for i in range(len(self.decoded)):
-            decoded = self.decoded[i]
-            if i == 0:
-              concat_indices = decoded.indices
-              concat_values = decoded.values
-            else:
-              decoded_indices = tf.concat([tf.expand_dims(decoded.indices[:, 0] + accelerate_indices, axis=-1),
-                                           tf.expand_dims(decoded.indices[:, 1], axis=-1)], axis=1)
-              concat_indices = tf.concat([concat_indices, decoded_indices], axis=0)
-              concat_values = tf.concat([concat_values, decoded.values], axis=0)
+        concat_indices = None
+        concat_values = None
+        accelerate_indices = 0
 
-            accelerate_indices += decoded.shape[0]
+        for i in range(len(self.decoded)):
+          decoded = self.decoded[i]
+          if i == 0:
+            concat_indices = decoded.indices
+            concat_values = decoded.values
+          else:
+            decoded_indices = tf.concat([tf.expand_dims(decoded.indices[:, 0] + accelerate_indices, axis=-1),
+                                         tf.expand_dims(decoded.indices[:, 1], axis=-1)], axis=1)
+            concat_indices = tf.concat([concat_indices, decoded_indices], axis=0)
+            concat_values = tf.concat([concat_values, decoded.values], axis=0)
 
-          first_dim = self.FLAGS.batch_size
-          second_dim = tf.reduce_max(self.seq_len)
+          accelerate_indices += decoded.shape[0]
 
-          concat_values = tf.cast(concat_values, tf.int32)
+        first_dim = self.FLAGS.batch_size
+        second_dim = tf.reduce_max(self.seq_len)
 
-          print('Informations  \noutput:{}\ndecoded:{},\nseq_len:{},'
-                '\nconcat_indices:{},\nconcat_values:{}'
-                .format(self.output, self.decoded, self.seq_len, concat_indices, concat_values))
-          print('first dimension:{},\nsecond dimension:{}'.format(first_dim, second_dim))
+        concat_values = tf.cast(concat_values, tf.int32)
 
-          decoded_tensor = tf.SparseTensor(indices=concat_indices, values=concat_values,
-                                           dense_shape=[first_dim, second_dim])
+        print('Informations  \noutput:{}\ndecoded:{},\nseq_len:{},'
+              '\nconcat_indices:{},\nconcat_values:{}'
+              .format(self.output, self.decoded, self.seq_len, concat_indices, concat_values))
+        print('first dimension:{},\nsecond dimension:{}'.format(first_dim, second_dim))
 
-          edit_distance = tf.edit_distance(decoded_tensor, self.y, name='edit_distance')
-          self.acc_op = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_mean(edit_distance), name='subtract')
-          # self.acc = tf.subtract(tf.constant(1, dtype=tf.float32), edit_distance, name='subtract')
-          # self.acc_op = tf.identity(self.acc)
+        decoded_tensor = tf.SparseTensor(indices=concat_indices, values=concat_values,
+                                         dense_shape=[first_dim, second_dim])
 
-        self.global_step = tf.Variable(0, name='global_step', trainable=True)
-        self.learning_rate = tf.train.exponential_decay(self.FLAGS.INITIAL_LEARNING_RATE,
-                                                        self.global_step,
-                                                        self.FLAGS.DECAY_STEPS,
-                                                        self.FLAGS.LEARNING_RATE_DECAY_FACTOR,
-                                                        staircase=True)
+        edit_distance = tf.edit_distance(decoded_tensor, self.y, name='edit_distance')
+        self.acc_op = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_mean(edit_distance), name='subtract')
 
-        self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
-        self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
-        self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step)
+      self.global_step = tf.Variable(0, name='global_step', trainable=True)
+      self.learning_rate = tf.train.exponential_decay(self.FLAGS.INITIAL_LEARNING_RATE,
+                                                      self.global_step,
+                                                      self.FLAGS.DECAY_STEPS,
+                                                      self.FLAGS.LEARNING_RATE_DECAY_FACTOR,
+                                                      staircase=True)
 
-        # self.train_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
-        #   .minimize(self.loss, global_step=self.global_step)
+      self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
+      self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
+      self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step)
 
-        # 开始记录信息
-        self.summary()
+      # self.train_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+      #   .minimize(self.loss, global_step=self.global_step)
 
-        self.sess.run(tf.global_variables_initializer())
+      # 开始记录信息
+      self.summary()
+
+      self.sess.run(tf.global_variables_initializer())
 
   def calc_accuracy(self, decode_list, test_target):
     original_list = decode_sparse_tensor(test_target)
@@ -261,12 +259,12 @@ class CRNN():
     # test_inputs, test_targets, test_seq_len = get_next_batch(self.FLAGS.batch_size)
     # test_inputs, test_targets, test_seq_len = get_next_batch(1)
     print('test sequence length:', test_seq_len)
-    # decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
-    #                                                   test_seq_len,
-    #                                                   merge_repeated=False)
+    decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
+                                                      test_seq_len,
+                                                      merge_repeated=False)
 
-    decoded, log_prob = tf.nn.ctc_greedy_decoder(self.output,
-                                                 test_seq_len)
+    # decoded, log_prob = tf.nn.ctc_greedy_decoder(self.output,
+    #                                              test_seq_len)
 
     test_feed = {self.X: test_inputs,
                  self.y: test_targets,
@@ -334,7 +332,7 @@ class CRNN():
       feed_dict=feed_dict
     )
 
-    time_str = datetime.datetime.now().isoformat()
+    # time_str = datetime.datetime.now().isoformat()
     # print("{}:step{},loss:{},acc:{},decoded:{}".format(time_str, step, loss, accuracy, self.decoded[0]))
     print("step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
 
@@ -363,6 +361,7 @@ class CRNN():
       # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       for step in range(32):
         inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+        plot(inputs[0], decode_sparse_tensor(sparse_targets)[0])
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
         current_step = tf.train.global_step(self.sess, self.global_step)

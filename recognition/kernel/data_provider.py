@@ -81,28 +81,28 @@ def get_next_batch(batch_size=128, gene=1):
 
     X[i] = tmp
     y[i] = [characters.find(x) for x in random_str]
-  plot(X[0], y[0])
-  i = 0
-  XX = None
-  yy = None
-  for batch in datagen.flow(X, y, batch_size=batch_size):
-    #             print(batch[0].shape, batch[1].shape)
 
-    if not type(XX) == np.ndarray:
-      XX = batch[0]
-      yy = batch[1]
-    else:
-      XX = np.concatenate([XX, batch[0]], axis=0)
-      yy = np.concatenate([yy, batch[1]], axis=0)
+  # i = 0
+  # XX = None
+  # yy = None
+  # for batch in datagen.flow(X, y, batch_size=batch_size):
+  #   #             print(batch[0].shape, batch[1].shape)
+  #
+  #   if not type(XX) == np.ndarray:
+  #     XX = batch[0]
+  #     yy = batch[1]
+  #   else:
+  #     XX = np.concatenate([XX, batch[0]], axis=0)
+  #     yy = np.concatenate([yy, batch[1]], axis=0)
+  #
+  #   i += 1
+  #   if i >= gene:
+  #     break
 
-    i += 1
-    if i >= gene:
-      break
-
-  sparse_target = sparse_tuple_from(yy)
+  sparse_target = sparse_tuple_from(y)
   seq_len = np.ones(batch_size) * 10
 
-  return XX, sparse_target, seq_len
+  return X, sparse_target, seq_len
 
 
 if __name__ == '__main__':

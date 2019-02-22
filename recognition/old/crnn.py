@@ -161,7 +161,7 @@ def evaluate(batch_size=128, steps=10):
         [X_test, y_test, _, _], _ = next(generator)
         y_pred = base_model.predict(X_test)
         shape = y_pred[:, 2:, :].shape
-        ctc_decode = K.ctc_decode(y_pred[:, 2:, :], input_length=np.ones(shape[0]) * shape[1], greedy=False)[0][0],
+        ctc_decode = K.ctc_decode(y_pred[:, 2:, :], input_length=np.ones(shape[0]) * shape[1])[0][0]
         out = K.get_value(ctc_decode)[:, :n_len]
         # out = K.get_value(ctc_decode)[:, :]
         print(y_test[0], out[0])
