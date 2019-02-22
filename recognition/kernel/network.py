@@ -14,7 +14,7 @@ from recognition.kernel.data_provider import *
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 128, 16, 10, len(characters) + 2
+width, height, n_len, n_class = 128, 16, 8, len(characters) + 2
 
 
 class CRNN():
