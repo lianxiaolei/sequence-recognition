@@ -14,7 +14,7 @@ from recognition.kernel.data_provider import *
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 128, 16, 8, len(characters) + 2
+width, height, n_len, n_class = 128, 16, 8, len(characters) + 1
 
 
 class CRNN():
@@ -103,7 +103,7 @@ class CRNN():
 
     x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout')
 
-    x = slim.fully_connected(x, self.num_class - 1, activation_fn=tf.nn.softmax)
+    x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
 
     # time major 模式需要的input shape:(max_time x batch_size x num_classes)
     x = tf.transpose(x, (1, 0, 2))
@@ -138,7 +138,7 @@ class CRNN():
 
     # 定义CNN kernels
     with tf.name_scope(name='cnn_kernels'):
-      kernel_shape = [3, 3, 1, 32]
+      kernel_shape = [3, 3, 1, 64]
       self.w00 = self._init_variable(kernel_shape, name='conv_w00')
       for i in range(3):
         for j in range(2):
@@ -166,7 +166,7 @@ class CRNN():
 
       with self.sess.as_default():
         self._build_network(input_shape, lr=lr, epoch=epoch, mode=mode)
-        [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
+        # [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
 
         # 计算误差
         with tf.name_scope('loss'):
