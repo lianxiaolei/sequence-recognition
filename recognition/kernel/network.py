@@ -106,7 +106,7 @@ class CRNN():
     x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
 
     # time major 模式需要的input shape:(max_time x batch_size x num_classes)
-    x = tf.transpose(x, (1, 0, 2))
+    # x = tf.transpose(x, (1, 0, 2))
 
     return x
 
@@ -173,7 +173,9 @@ class CRNN():
           #  time_major默认为True
           self.loss = tf.reduce_mean(
             tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-                           sequence_length=self.seq_len, preprocess_collapse_repeated=True))
+                           sequence_length=self.seq_len,
+                           preprocess_collapse_repeated=True,
+                           time_major=False))
 
         # 使用编辑距离计算准确率
         with tf.name_scope('accuracy'):
