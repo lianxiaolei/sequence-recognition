@@ -171,15 +171,14 @@ class CRNN():
         self._build_network(input_shape, lr=lr, epoch=epoch, mode=mode)
         # [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
 
-        # 计算误差
-        with tf.name_scope('loss'):
+        # 使用编辑距离计算准确率
+        with tf.name_scope('accuracy'):
+          # 计算误差
           #  time_major默认为True
           self.loss = tf.reduce_mean(
             tf.nn.ctc_loss(labels=self.y, inputs=self.output,
                            sequence_length=self.seq_len, preprocess_collapse_repeated=True))
 
-        # 使用编辑距离计算准确率
-        with tf.name_scope('accuracy'):
           #  time_major默认为True
           self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
                                                                       merge_repeated=False, top_paths=1)
