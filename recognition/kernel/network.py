@@ -103,7 +103,7 @@ class CRNN():
 
     x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout')
 
-    x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
+    x = slim.fully_connected(x, self.num_class - 1, activation_fn=tf.nn.softmax)
 
     # time major 模式需要的input shape:(max_time x batch_size x num_classes)
     x = tf.transpose(x, (1, 0, 2))
