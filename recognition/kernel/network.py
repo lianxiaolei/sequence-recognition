@@ -389,7 +389,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer("evaluate_every",
                               10, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
-                              width / 8, "Rnn Units")
+                              int(width / 8), "Rnn Units")
   # 初始化学习速率
   tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
   tf.app.flags.DEFINE_integer('DECAY_STEPS', 5000, 'DECAY_STEPS')
