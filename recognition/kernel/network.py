@@ -104,7 +104,7 @@ class CRNN():
     #   fw_cell_list, bw_cell_list, x, sequence_length=self.seq_len, dtype=tf.float32)
 
     cell = rnn.MultiRNNCell(fw_cell_list)
-    x = tf.nn.dynamic_rnn(cell, x, self.seq_len, dtype=tf.float32)
+    x, _ = tf.nn.dynamic_rnn(cell, x, self.seq_len, dtype=tf.float32)
 
     x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
 
