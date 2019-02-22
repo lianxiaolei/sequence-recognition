@@ -177,8 +177,9 @@ class Evaluator(Callback):
     def on_epoch_end(self, epoch, logs=None):
         acc = evaluate(steps=20) * 100
         self.accs.append(acc)
-        base_model.save('./crnn_epoch.h5')
-        print('')
+        if acc > 80:
+            base_model.save('./crnn_epoch.h5')
+            print('Model saved!')
         print('acc: %f%%' % acc)
 
 
