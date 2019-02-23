@@ -43,10 +43,10 @@ class CRNN():
       x = tf.layers.batch_normalization(x, name='bn0%s' % i)
       tf.nn.relu(x)
 
-      # x = tf.nn.conv2d(x, eval('self.w%s1' % i), [1, 1, 1, 1],
-      #                  padding='SAME', name='cnn1%s' % i)
-      # x = tf.layers.batch_normalization(x, name='bn1%s' % i)
-      # tf.nn.relu(x)
+      x = tf.nn.conv2d(x, eval('self.w%s1' % i), [1, 1, 1, 1],
+                       padding='SAME', name='cnn1%s' % i)
+      x = tf.layers.batch_normalization(x, name='bn1%s' % i)
+      tf.nn.relu(x)
 
       x = tf.nn.max_pool(x, [1, 2, 2, 1], strides=[1, 2, 2, 1],
                          padding='VALID', name='cnn2%s' % i)
@@ -294,17 +294,13 @@ class CRNN():
     grad_summaries_merged = tf.summary.merge(grad_summaries)
 
     # Train summaries
-    # self.train_summary_op = tf.contrib.deprecated.merge_summary([loss_summary, acc_summary])
     self.train_summary_op = tf.summary.merge([loss_summary, acc_summary])
     train_summary_dir = os.path.join(out_dir, 'summaries', 'train')
-    # self.train_summary_writer = tf.contrib.summary.SummaryWriter(train_summary_dir, self.sess.graph_def)
     self.train_summary_writer = tf.summary.FileWriter(train_summary_dir, self.sess.graph)
 
     # Dev summaries
-    # self.dev_summary_op = tf.contrib.deprecated.merge_summary([loss_summary, acc_summary])
     self.dev_summary_op = tf.summary.merge([loss_summary, acc_summary])
     dev_summary_dir = os.path.join(out_dir, "summaries", "dev")
-    # self.dev_summary_writer = tf.contrib.summary.SummaryWriter(dev_summary_dir, self.sess.graph_def)
     self.dev_summary_writer = tf.summary.FileWriter(dev_summary_dir, self.sess.graph)
 
   def checkpoint(self, out_dir):

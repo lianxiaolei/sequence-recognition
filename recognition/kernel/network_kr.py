@@ -9,7 +9,7 @@ from keras.preprocessing.image import ImageDataGenerator
 import matplotlib
 import tensorflow as tf
 
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 DIGITS = '0123456789'
@@ -24,6 +24,13 @@ datagen = ImageDataGenerator(
   shear_range=0.2,
   zoom_range=0.0,
   fill_mode='nearest')
+
+
+def plot(img, title):
+  print('打印')
+  plt.imshow(img[:, :, 0])
+  plt.title(title)
+  plt.show()
 
 
 def get_img_by_char(char, base_path='../../dataset/nums'):
@@ -87,7 +94,7 @@ def gen(batch_size=128, gene=1, sigma=3):
       # print(X[i, 0: shape[0], 0: shape[1], :].shape, shape[0], shape[1])
       X[i, 0: shape[0], 0: shape[1], :] = tmp
       y[i, 0: len(random_str)] = [characters.find(x) for x in random_str]
-
+    plot(X[0], y[0])
     i = 0
     XX = None
     yy = None
@@ -276,6 +283,7 @@ class Evaluator(Callback):
 
 
 if __name__ == '__main__':
-  crnn = CRNN(num_class=n_class, rnn_units=128, batch_size=128)
-  crnn._build_network()
-  crnn.train()
+  # crnn = CRNN(num_class=n_class, rnn_units=128, batch_size=128)
+  # crnn._build_network()
+  # crnn.train()
+  next(gen(1))
