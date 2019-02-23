@@ -2,16 +2,11 @@
 
 import random
 import cv2
-import skimage
 from keras.callbacks import *
 from keras.layers import *
 from keras.models import *
-import tensorflow as tf
 import time
-# from keras.layers.merge import Concatenate
-# from keras.layers.core import Lambda
-# from keras.models import Model
-from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
+from keras.preprocessing.image import ImageDataGenerator
 import matplotlib
 import tensorflow as tf
 
@@ -142,15 +137,15 @@ def gen(batch_size=128, gene=4):
             i += 1
             if i >= gene:
                 break
-        yield [XX, yy,
-               np.ones(batch_size * gene) * rnn_length,
-               np.ones(batch_size * gene) * n_len], \
+        print(np.ones(batch_size * gene).shape)
+        yield [XX, yy, np.ones(batch_size * gene) * rnn_length, np.ones(batch_size * gene) * n_len], \
               np.ones(batch_size * gene)
 
 
 def ctc_lambda_func(args):
     y_pred, labels, input_length, label_length = args
     y_pred = y_pred[:, 2:, :]  # [batch, rnn-step(height) - 2, num_class]
+    # input_length表示输入的序列长度，每条输入数据长度可能不一
     return K.ctc_batch_cost(labels, y_pred, input_length, label_length)
 
 
@@ -181,6 +176,21 @@ class Evaluator(Callback):
             base_model.save('./crnn_epoch.h5')
             print('Model saved!')
         print('acc: %f%%' % acc)
+
+    def evaluate(self, batch_size=128, steps=10):
+        batch_acc = 0
+        generator = gen(batch_size)
+        for i in range(steps):
+            [X_test, y_test, _, _], _ = next(generator)
+            y_pred = base_model.predict(X_test)
+            shape = y_pred[:, 2:, :].shape
+            ctc_decode = K.ctc_decode(y_pred[:, 2:, :], input_length=np.ones(shape[0]) * shape[1])[0][0]
+            out = K.get_value(ctc_decode)[:, :n_len]
+            # out = K.get_value(ctc_decode)[:, :]
+            print(y_test[0], out[0])
+            if out.shape[1] == n_len:
+                batch_acc += (y_test == out).all(axis=1).mean()
+        return batch_acc / steps
 
 
 evaluator = Evaluator()
@@ -237,8 +247,9 @@ base_model = Model(input=input_tensor, output=x)  # [batch, height, units * 2]
 # base_model2 = make_parallel(base_model, 4)
 
 labels = Input(name='the_labels', shape=[n_len], dtype='float32')
-input_length = Input(name='input_length', shape=(1,), dtype='int64')
-label_length = Input(name='label_length', shape=(1,), dtype='int64')
+# 这里的shape不算batch维度日了狗
+input_length = Input(name='input_length', shape=(1, ), dtype='int64')
+label_length = Input(name='label_length', shape=(1, ), dtype='int64')
 loss_out = Lambda(ctc_lambda_func, name='ctc')([base_model.output, labels, input_length, label_length])
 print('loss out', loss_out)
 model = Model(inputs=(input_tensor, labels, input_length, label_length), outputs=loss_out)
@@ -246,9 +257,9 @@ model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer='adam')
 
 print('-' * 30, 'starting', '-' * 30)
 print(time.asctime(time.localtime(time.time())))
-h = model.fit_generator(gen(128, gene=1), steps_per_epoch=100, epochs=20,
+h = model.fit_generator(gen(2, gene=1), steps_per_epoch=100, epochs=20,
                         callbacks=[evaluator],
-                        validation_data=gen(128, gene=1), validation_steps=20)
+                        validation_data=gen(2, gene=1), validation_steps=20)
 
 print(time.asctime(time.localtime(time.time())))
 print('training done!')

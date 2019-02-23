@@ -94,9 +94,9 @@ class CRNN():
     #
     # x = tf.concat([x[0], x[1]], axis=-1, name='concat')
 
-    # 构建双向叠加RNN
+    # 构建多层RNN
     fw_cell_list = [rnn.GRUCell(nh, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-                    for nh in [self.rnn_units] * 2]
+                    for nh in [self.rnn_units] * 8]
     # Backward direction cells
     # bw_cell_list = [rnn.GRUCell(nh, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     #                 for nh in [self.rnn_units] * 2]
@@ -171,7 +171,6 @@ class CRNN():
       self._build_network(input_shape, lr=lr, epoch=epoch, mode=mode)
       # [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
 
-      # 使用编辑距离计算准确率
       with tf.name_scope('accuracy'):
         # 计算误差
         #  time_major默认为True
@@ -214,6 +213,7 @@ class CRNN():
         decoded_tensor = tf.SparseTensor(indices=concat_indices, values=concat_values,
                                          dense_shape=[first_dim, second_dim])
 
+        # 使用编辑距离计算准确率
         edit_distance = tf.edit_distance(decoded_tensor, self.y, name='edit_distance')
         self.acc_op = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_mean(edit_distance), name='subtract')
 
@@ -384,7 +384,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
-                              128, "Batch Size (default: 64)")
+                              8, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             0.85, "Dropout keep probability (default: 0.5)")
   tf.app.flags.DEFINE_integer("evaluate_every",

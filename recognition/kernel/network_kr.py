@@ -1,196 +1,281 @@
-import os, sys, string
-import sys
-import logging
-import multiprocessing
-import time
-import json
+# coding: utf-8
+
+import random
 import cv2
-import numpy as np
-from sklearn.model_selection import train_test_split
-
-import keras
-import keras.backend as K
-from keras.datasets import mnist
-from keras.models import *
-from keras.layers import *
-from keras.optimizers import *
 from keras.callbacks import *
-from keras import backend as K
+from keras.layers import *
+from keras.models import *
+from keras.preprocessing.image import ImageDataGenerator
+import matplotlib
+import tensorflow as tf
 
-from recognition.kernel.visual_callbacks import AccLossPlotter
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
-plotter = AccLossPlotter(graphs=['acc', 'loss'], save_graph=True, save_graph_path=sys.path[0])
+DIGITS = '0123456789'
+# characters = '0123456789+-*/=()'
+characters = '0123456789'
+width, height, max_len, n_class = 28, 28, 8, len(characters) + 1
 
-# 识别字符集
-char_ocr = '0123456789'  # string.digits
-# 定义识别字符串的最大长度
-seq_len = 8
-# 识别结果集合个数 0-9
-label_count = len(char_ocr) + 1
-
-
-def get_label(filepath):
-  # print(str(os.path.split(filepath)[-1]).split('.')[0].split('_')[-1])
-  lab = []
-  for num in str(os.path.split(filepath)[-1]).split('.')[0].split('_')[-1]:
-    lab.append(int(char_ocr.find(num)))
-  if len(lab) < seq_len:
-    cur_seq_len = len(lab)
-    for i in range(seq_len - cur_seq_len):
-      lab.append(label_count)  #
-  return lab
+datagen = ImageDataGenerator(
+  rotation_range=0.4,
+  width_shift_range=0.04,
+  height_shift_range=0.04,
+  shear_range=0.2,
+  zoom_range=0.0,
+  fill_mode='nearest')
 
 
-def gen_image_data(dir=r'../../dataset/nums', file_list=[]):
-  dir_path = dir
-  for rt, dirs, files in os.walk(dir_path):  # =pathDir
-    for filename in files:
-      # print (filename)
-      if filename.find('.') >= 0:
-        (shotname, extension) = os.path.splitext(filename)
-        # print shotname,extension
-        if extension == '.tif':  # extension == '.png' or
-          file_list.append(os.path.join('%s\\%s' % (rt, filename)))
-          # print (filename)
+def get_img_by_char(char, base_path='../../dataset/nums'):
+  """
+  get a img by giving char
+  :param char:
+  :param base_path:
+  :return:
+  """
+  opdict = {'+': 10, '-': 11, '*': 12, '/': 13, '=': 14, '(': 15, ')': 16}
+  if char in opdict.keys():
+    char = opdict[char]
+  path = os.path.join(base_path, str(char))
+  files = os.listdir(path)
 
-  print(len(file_list))
-  index = 0
-  X = []
-  Y = []
-  for file in file_list:
-    index += 1
-    # if index>1000:
-    #     break
-    # print(file)
-    img = cv2.imread(file, 0)
-    # print(np.shape(img))
-    # cv2.namedWindow("the window")
-    # cv2.imshow("the window",img)
-    img = cv2.resize(img, (150, 50), interpolation=cv2.INTER_CUBIC)
-    img = cv2.transpose(img, (50, 150))
-    img = cv2.flip(img, 1)
-    # cv2.namedWindow("the window")
-    # cv2.imshow("the window",img)
-    # cv2.waitKey()
-    img = (255 - img) / 256  # 反色处理
-    X.append([img])
-    Y.append(get_label(file))
-    # print(get_label(file))
-    # print(np.shape(X))
-    # print(np.shape(X))
+  rdm = random.randint(0, len(files) - 1)
+  if rdm >= len(files):
+    print(path, len(files), rdm)
 
-  # print(np.shape(X))
-  X = np.transpose(X, (0, 2, 3, 1))
-  X = np.array(X)
-  Y = np.array(Y)
-  return X, Y
+  file = files[rdm]
+  path = os.path.join(path, file)
+  return cv2.imread(path, cv2.IMREAD_GRAYSCALE)
 
 
-# the actual loss calc occurs here despite it not being
-# an internal Keras loss function
+def get_sequence_img(chars, char_len):
+  x = get_img_by_char(chars[0])
+  for i in range(1, len(chars)):
+    x = np.hstack([x, get_img_by_char(chars[i])])
+  x = cv2.resize(x, (int(char_len * width), height))
+  return x
 
-def ctc_lambda_func(args):
-  y_pred, labels, input_length, label_length = args
-  # the 2 is critical here since the first couple outputs of the RNN
-  # tend to be garbage:
-  # y_pred = y_pred[:, 2:, :] 测试感觉没影响
-  y_pred = y_pred[:, :, :]
-  return K.ctc_batch_cost(labels, y_pred, input_length, label_length)
+
+def gen(batch_size=128, gene=1, sigma=3):
+  """
+  Generate batch data for training and test.
+  Args:
+    batch_size: The size of a batch(default 128).
+    gene: Number of gene of a image.
+  Return:
+    arg0: A list contains data, label, rnn time steps, label sequence length.
+    arg1: A useless 1D data(The fit_generator's data generator must contain X and y, but we use ctc_loss as a layer.
+          so the loss calculation in this layer.
+  """
+  X = np.zeros((batch_size, width * max_len, height, 1), dtype=np.uint8)
+  y = np.ones((batch_size, max_len), dtype=np.uint8) * 222
+  # y = y.astype(dtype=np.str)
+  # y[y == '-1'] = ''
+  while True:
+    time_steps = np.zeros([batch_size])
+    for i in range(batch_size):
+      char_len = random.randint(max_len - sigma, max_len)
+      time_steps[i] = int(char_len * 28 / 8)
+      random_str = ''.join([random.choice(characters) for j in range(char_len)])
+
+      # Get dy-length sequence's image.
+      tmp = np.array(get_sequence_img(random_str, char_len=char_len))
+      tmp = tmp.reshape(tmp.shape[0], tmp.shape[1], 1)
+      tmp = tmp.transpose(1, 0, 2)
+
+      shape = tmp.shape
+      # print(X[i, 0: shape[0], 0: shape[1], :].shape, shape[0], shape[1])
+      X[i, 0: shape[0], 0: shape[1], :] = tmp
+      y[i, 0: len(random_str)] = [characters.find(x) for x in random_str]
+
+    i = 0
+    XX = None
+    yy = None
+    for batch in datagen.flow(X, y, batch_size=batch_size):
+      #             print(batch[0].shape, batch[1].shape)
+
+      if not type(XX) == np.ndarray:
+        XX = batch[0]
+        yy = batch[1]
+      else:
+        XX = np.concatenate([XX, batch[0]], axis=0)
+        yy = np.concatenate([yy, batch[1]], axis=0)
+
+      i += 1
+      if i >= gene:
+        break
+    yield [XX, yy, np.ones(batch_size * gene) * time_steps, np.ones(batch_size * gene) * time_steps], \
+          np.ones(batch_size * gene)
+    # print('input shape', np.ones(batch_size * gene) * time_steps)
+    # yield [XX, yy, np.array([1, 2]), np.array([1, 2])], \
+    #       np.ones(batch_size * gene)
+
+
+"""
+#################################################################
+CRNN network class:
+  The code below is CRNN network structure.
+#################################################################
+"""
+
+
+class CRNN(object):
+  """
+
+  """
+
+  def __init__(self, num_class, rnn_units, batch_size):
+    self.num_class = num_class
+    self.rnn_units = rnn_units
+    self.batch_size = batch_size
+
+  def make_parallel(self, model, gpu_count):
+    """
+
+    :param model:
+    :param gpu_count:
+    :return:
+    """
+
+    def get_slice(data, idx, parts):
+      shape = tf.shape(data)
+      size = tf.concat([shape[:1] // parts, shape[1:]], axis=0)
+      stride = tf.concat([shape[:1] // parts, shape[1:] * 0], axis=0)
+      start = stride * idx
+      return tf.slice(data, start, size)
+
+    outputs_all = []
+    for i in range(len(model.outputs)):
+      outputs_all.append([])
+
+    # Place a copy of the model on each GPU, each getting a slice of the batch
+    for i in range(gpu_count):
+      with tf.device('/gpu:%d' % i):
+        with tf.name_scope('tower_%d' % i) as scope:
+
+          inputs = []
+          # Slice each input into a piece for processing on this GPU
+          for x in model.inputs:
+            input_shape = tuple(x.get_shape().as_list())[1:]
+            slice_n = Lambda(get_slice, output_shape=input_shape, arguments={'idx': i, 'parts': gpu_count})(x)
+            inputs.append(slice_n)
+
+          outputs = model(inputs)
+
+          if not isinstance(outputs, list):
+            outputs = [outputs]
+
+          # Save all the outputs for merging back together later
+          for l in range(len(outputs)):
+            outputs_all[l].append(outputs[l])
+
+    # merge outputs on CPU
+    with tf.device('/cpu:0'):
+      merged = []
+      for outputs in outputs_all:
+        merged.append(Concatenate(axis=0)(outputs))
+
+      return Model(model.inputs, merged)
+
+  def ctc_lambda_func(self, args):
+    y_pred, labels, input_length, label_length = args
+    y_pred = y_pred[:, :, :]  # [batch, rnn-step(height), num_class]
+    # input_length表示输入的序列长度，每条输入数据长度可能不一
+    return K.ctc_batch_cost(labels, y_pred, input_length, label_length)
+
+  def _build_network(self):
+    input_tensor = Input((None, height, 1))
+    x = input_tensor
+
+    for i in range(3):
+      x = Conv2D(32 * 2 ** i, (3, 3), kernel_initializer='he_normal', padding='SAME')(x)
+      x = BatchNormalization()(x)
+      x = Activation('relu')(x)
+      x = Conv2D(32 * 2 ** i, (3, 3), kernel_initializer='he_normal', padding='SAME')(x)
+      x = BatchNormalization()(x)
+      x = Activation('relu')(x)
+      x = MaxPooling2D(pool_size=(2, 2))(x)
+
+    conv_shape = x.get_shape().as_list()
+    # self.time_steps = conv_shape[1]
+    rnn_dimen = conv_shape[2] * conv_shape[3]
+    # print(conv_shape, rnn_dimen)
+    x = Reshape(target_shape=(-1, rnn_dimen))(x)  # [batch, width, height * units]
+
+    x = Dense(self.rnn_units, kernel_initializer='he_normal')(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+
+    gru_1 = GRU(self.rnn_units, return_sequences=True, kernel_initializer='he_normal', name='gru1')(x)
+    gru_1b = GRU(self.rnn_units, return_sequences=True, go_backwards=True, kernel_initializer='he_normal',
+                 name='gru1_b')(x)
+    gru1_merged = add([gru_1, gru_1b])  # [batch, height, units]
+
+    gru_2 = GRU(self.rnn_units, return_sequences=True, kernel_initializer='he_normal', name='gru2')(gru1_merged)
+    gru_2b = GRU(self.rnn_units, return_sequences=True, go_backwards=True, kernel_initializer='he_normal',
+                 name='gru2_b')(gru1_merged)
+
+    x = concatenate([gru_2, gru_2b])  # [batch, height, units * 2]
+    x = Dropout(0.25)(x)
+    # [batch, height, n_class]
+    x = Dense(n_class, kernel_initializer='he_normal', activation='softmax')(x)
+    self.base_model = Model(input=input_tensor, output=x)  # [batch, height, units * 2]
+
+    # base_model2 = make_parallel(base_model, 4)
+
+    labels = Input(name='the_labels', shape=[max_len], dtype='int32')
+    input_length = Input(name='input_length', shape=(1,), dtype='int64')
+    label_length = Input(name='label_length', shape=(1,), dtype='int64')
+    loss_out = Lambda(self.ctc_lambda_func, name='ctc')([self.base_model.output, labels, input_length, label_length])
+    print('loss out', loss_out)
+
+    # Define The ultimate model.
+    # inputs is the first return item of fit's data function's.
+    # The second return item of fit's data function will be used in compile function.
+    self.model = Model(inputs=(input_tensor, labels, input_length, label_length), outputs=loss_out)
+    self.model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer='adam')
+
+  def train(self):
+    self.early_stopping = EarlyStopping(monitor='val_loss', patience=30)
+    self.history = self.model.fit_generator(gen(self.batch_size, gene=1), steps_per_epoch=100,
+                                            epochs=20,
+                                            callbacks=[Evaluator(self.base_model), self.early_stopping],
+                                            validation_data=gen(self.batch_size, gene=1), validation_steps=20)
+
+  def save_model(self):
+    self.base_model.save('./crnn_model_10.h5')
+    print('save model done!')
+
+
+class Evaluator(Callback):
+  def __init__(self, base_model):
+    self.accs = []
+    self.base_model = base_model
+
+  def on_epoch_end(self, epoch, logs=None):
+    acc = self.evaluate(steps=20) * 100
+    self.accs.append(acc)
+    if acc > 80:
+      self.base_model.save('./crnn_epoch.h5')
+      print('Model saved!')
+    print('acc: %f%%' % acc)
+
+  def evaluate(self, batch_size=128, steps=10):
+    batch_acc = 0
+    generator = gen(batch_size)
+    for i in range(steps):
+      [X_test, y_test, _, _], _ = next(generator)
+      y_pred = self.base_model.predict(X_test)
+      shape = y_pred[:, 2:, :].shape
+      ctc_decode = K.ctc_decode(y_pred[:, 2:, :], input_length=np.ones(shape[0]) * shape[1])[0][0]
+      out = K.get_value(ctc_decode)[:, :max_len]
+      print(y_test[0], out[0])
+      if out.shape[1] == max_len:
+        batch_acc += (y_test == out).all(axis=1).mean()
+    return batch_acc / steps
 
 
 if __name__ == '__main__':
-  height = 150
-  width = 50
-  input_tensor = Input((height, width, 1))
-  x = input_tensor
-  for i in range(3):
-    x = Convolution2D(32 * 2 ** i, (3, 3), activation='relu', padding='same')(x)
-    # x = Convolution2D(32*2**i, (3, 3), activation='relu')(x)
-    x = MaxPooling2D(pool_size=(2, 2))(x)
-
-  conv_shape = x.get_shape()
-  # print(conv_shape)
-  x = Reshape(target_shape=(int(conv_shape[1]), int(conv_shape[2] * conv_shape[3])))(x)
-
-  x = Dense(32, activation='relu')(x)
-
-  gru_1 = GRU(32, return_sequences=True, kernel_initializer='he_normal', name='gru1')(x)
-  gru_1b = GRU(32, return_sequences=True, go_backwards=True, kernel_initializer='he_normal', name='gru1_b')(x)
-  gru1_merged = add([gru_1, gru_1b])  ###################
-
-  gru_2 = GRU(32, return_sequences=True, kernel_initializer='he_normal', name='gru2')(gru1_merged)
-  gru_2b = GRU(32, return_sequences=True, go_backwards=True, kernel_initializer='he_normal', name='gru2_b')(
-    gru1_merged)
-  x = concatenate([gru_2, gru_2b])  ######################
-  x = Dropout(0.25)(x)
-  x = Dense(label_count, kernel_initializer='he_normal', activation='softmax')(x)
-  base_model = Model(inputs=input_tensor, outputs=x)
-
-  labels = Input(name='the_labels', shape=[seq_len], dtype='float32')
-  input_length = Input(name='input_length', shape=[1], dtype='int64')
-  label_length = Input(name='label_length', shape=[1], dtype='int64')
-  loss_out = Lambda(ctc_lambda_func, output_shape=(1,), name='ctc')([x, labels, input_length, label_length])
-
-  model = Model(inputs=[input_tensor, labels, input_length, label_length], outputs=[loss_out])
-  model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer='adadelta')
-  model.summary()
-
-
-  def test(base_model):
-    file_list = []
-    X, Y = gen_image_data(r'data\test', file_list)
-    y_pred = base_model.predict(X)
-    shape = y_pred[:, :, :].shape  # 2:
-    out = K.get_value(K.ctc_decode(y_pred[:, :, :], input_length=np.ones(shape[0]) * shape[1])[0][0])[:,
-          :seq_len]  # 2:
-    print()
-    error_count = 0
-    for i in range(len(X)):
-      print(file_list[i])
-      str_src = str(os.path.split(file_list[i])[-1]).split('.')[0].split('_')[-1]
-      print(out[i])
-      str_out = ''.join([str(x) for x in out[i] if x != -1])
-      print(str_src, str_out)
-      if str_src != str_out:
-        error_count += 1
-        print('################################', error_count)
-      # img = cv2.imread(file_list[i])
-      # cv2.imshow('image', img)
-      # cv2.waitKey()
-
-
-  class LossHistory(Callback):
-    def on_train_begin(self, logs={}):
-      self.losses = []
-
-    def on_epoch_end(self, epoch, logs=None):
-      model.save_weights('model_1018.w')
-      base_model.save_weights('base_model_1018.w')
-      test(base_model)
-
-    def on_batch_end(self, batch, logs={}):
-      self.losses.append(logs.get('loss'))
-
-
-  # checkpointer = ModelCheckpoint(filepath="keras_seq2seq_1018.hdf5", verbose=1, save_best_only=True, )
-  history = LossHistory()
-
-  # base_model.load_weights('base_model_1018.w')
-  # model.load_weights('model_1018.w')
-
-  X, Y = gen_image_data()
-  maxin = 4900
-  subseq_size = 100
-  batch_size = 10
-  result = model.fit([X[:maxin], Y[:maxin], np.array(np.ones(len(X)) * int(conv_shape[1]))[:maxin],
-                      np.array(np.ones(len(X)) * seq_len)[:maxin]], Y[:maxin],
-                     batch_size=20,
-                     epochs=1000,
-                     callbacks=[history, plotter, EarlyStopping(patience=10)],  # checkpointer, history,
-                     validation_data=([X[maxin:], Y[maxin:], np.array(np.ones(len(X)) * int(conv_shape[1]))[maxin:],
-                                       np.array(np.ones(len(X)) * seq_len)[maxin:]], Y[maxin:]),
-                     )
-
-  test(base_model)
-
-  K.clear_session()
+  crnn = CRNN(num_class=n_class, rnn_units=128, batch_size=128)
+  crnn._build_network()
+  crnn.train()

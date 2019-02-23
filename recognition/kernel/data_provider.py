@@ -11,8 +11,7 @@ import matplotlib.pyplot as plt
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-# width, height, n_len = 128, 16, 8
-width, height, n_len = 128, 32, 8
+width, height, n_len = 128, 16, 8
 
 datagen = ImageDataGenerator(
   rotation_range=0.4,
@@ -71,19 +70,17 @@ def get_sequence_img(chars):
 
 
 def get_next_batch(batch_size=128, gene=1):
-  # X = np.zeros((batch_size, width, height, 1), dtype=np.uint8)
-  X = np.zeros((batch_size, width, height), dtype=np.uint8)
+  X = np.zeros((batch_size, width, height, 1), dtype=np.uint8)
   y = np.zeros((batch_size, n_len), dtype=np.uint8)
   for i in range(batch_size):
     random_str = ''.join([random.choice(characters) for j in range(n_len)])
     #             random_str = '60/3=20'
     tmp = np.array(get_sequence_img(random_str))
-    # tmp = tmp.reshape(tmp.shape[0], tmp.shape[1], 1)
-    # tmp = tmp.transpose(1, 0, 2)
-    tmp = tmp.transpose(1, 0)
+    tmp = tmp.reshape(tmp.shape[0], tmp.shape[1], 1)
+    tmp = tmp.transpose(1, 0, 2)
 
     X[i] = tmp
-    y[i] = [characters.find(x) for x in random_str]
+    y[i] = [str(characters.find(x)) for x in random_str]
 
   # i = 0
   # XX = None
