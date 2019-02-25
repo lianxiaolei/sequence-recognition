@@ -15,14 +15,14 @@ import matplotlib.pyplot as plt
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, max_len, n_class = 28, 28, 8, len(characters) + 1
+width, height, n_len, n_class = 280, 28, 8, len(characters) + 1
 
 datagen = ImageDataGenerator(
   rotation_range=0.4,
-  width_shift_range=0.04,
-  height_shift_range=0.04,
+  width_shift_range=0.1,
+  height_shift_range=0.1,
   shear_range=0.2,
-  zoom_range=0.0,
+  zoom_range=0.2,
   fill_mode='nearest')
 
 
@@ -55,15 +55,15 @@ def get_img_by_char(char, base_path='../../dataset/nums'):
   return cv2.imread(path, cv2.IMREAD_GRAYSCALE)
 
 
-def get_sequence_img(chars, char_len):
+def get_sequence_img(chars):
   x = get_img_by_char(chars[0])
   for i in range(1, len(chars)):
     x = np.hstack([x, get_img_by_char(chars[i])])
-  x = cv2.resize(x, (int(char_len * width), height))
+  x = cv2.resize(x, (width, height))
   return x
 
 
-def gen(batch_size=128, gene=1, sigma=3):
+def gen(batch_size=128, gene=1, time_steps=0):
   """
   Generate batch data for training and test.
   Args:
@@ -74,19 +74,14 @@ def gen(batch_size=128, gene=1, sigma=3):
     arg1: A useless 1D data(The fit_generator's data generator must contain X and y, but we use ctc_loss as a layer.
           so the loss calculation in this layer.
   """
-  X = np.zeros((batch_size, width * max_len, height, 1), dtype=np.uint8)
-  y = np.ones((batch_size, max_len), dtype=np.uint8) * 222
-  # y = y.astype(dtype=np.str)
-  # y[y == '-1'] = ''
+  X = np.zeros((batch_size, width, height, 1), dtype=np.uint8)
+  y = np.zeros((batch_size, n_len), dtype=np.uint8)
   while True:
-    time_steps = np.zeros([batch_size])
     for i in range(batch_size):
-      char_len = random.randint(max_len - sigma, max_len)
-      time_steps[i] = int(char_len * 28 / 8)
-      random_str = ''.join([random.choice(characters) for j in range(char_len)])
+      random_str = ''.join([random.choice(characters) for j in range(n_len)])
 
       # Get dy-length sequence's image.
-      tmp = np.array(get_sequence_img(random_str, char_len=char_len))
+      tmp = np.array(get_sequence_img(random_str))
       tmp = tmp.reshape(tmp.shape[0], tmp.shape[1], 1)
       tmp = tmp.transpose(1, 0, 2)
 
@@ -94,7 +89,7 @@ def gen(batch_size=128, gene=1, sigma=3):
       # print(X[i, 0: shape[0], 0: shape[1], :].shape, shape[0], shape[1])
       X[i, 0: shape[0], 0: shape[1], :] = tmp
       y[i, 0: len(random_str)] = [characters.find(x) for x in random_str]
-    plot(X[0], y[0])
+    # plot(X[0], y[0])
     i = 0
     XX = None
     yy = None
@@ -111,7 +106,7 @@ def gen(batch_size=128, gene=1, sigma=3):
       i += 1
       if i >= gene:
         break
-    yield [XX, yy, np.ones(batch_size * gene) * time_steps, np.ones(batch_size * gene) * time_steps], \
+    yield [XX, yy, np.ones(batch_size * gene) * time_steps, np.ones(batch_size * gene) * n_len], \
           np.ones(batch_size * gene)
     # print('input shape', np.ones(batch_size * gene) * time_steps)
     # yield [XX, yy, np.array([1, 2]), np.array([1, 2])], \
@@ -191,7 +186,7 @@ class CRNN(object):
     return K.ctc_batch_cost(labels, y_pred, input_length, label_length)
 
   def _build_network(self):
-    input_tensor = Input((None, height, 1))
+    input_tensor = Input((width, height, 1))
     x = input_tensor
 
     for i in range(3):
@@ -204,10 +199,10 @@ class CRNN(object):
       x = MaxPooling2D(pool_size=(2, 2))(x)
 
     conv_shape = x.get_shape().as_list()
-    # self.time_steps = conv_shape[1]
+    self.time_steps = conv_shape[1]
     rnn_dimen = conv_shape[2] * conv_shape[3]
     # print(conv_shape, rnn_dimen)
-    x = Reshape(target_shape=(-1, rnn_dimen))(x)  # [batch, width, height * units]
+    x = Reshape(target_shape=(self.time_steps, rnn_dimen))(x)  # [batch, width, height * units]
 
     x = Dense(self.rnn_units, kernel_initializer='he_normal')(x)
     x = BatchNormalization()(x)
@@ -230,7 +225,7 @@ class CRNN(object):
 
     # base_model2 = make_parallel(base_model, 4)
 
-    labels = Input(name='the_labels', shape=[max_len], dtype='int32')
+    labels = Input(name='the_labels', shape=[n_len], dtype='int32')
     input_length = Input(name='input_length', shape=(1,), dtype='int64')
     label_length = Input(name='label_length', shape=(1,), dtype='int64')
     loss_out = Lambda(self.ctc_lambda_func, name='ctc')([self.base_model.output, labels, input_length, label_length])
@@ -244,10 +239,10 @@ class CRNN(object):
 
   def train(self):
     self.early_stopping = EarlyStopping(monitor='val_loss', patience=30)
-    self.history = self.model.fit_generator(gen(self.batch_size, gene=8), steps_per_epoch=100,
+    self.history = self.model.fit_generator(gen(self.batch_size, gene=8, time_steps=self.time_steps), steps_per_epoch=100,
                                             epochs=20,
                                             callbacks=[Evaluator(self.base_model), self.early_stopping],
-                                            validation_data=gen(self.batch_size, gene=8), validation_steps=20)
+                                            validation_data=gen(self.batch_size, gene=8, time_steps=self.time_steps), validation_steps=20)
 
   def save_model(self):
     self.base_model.save('./crnn_model_10.h5')
@@ -273,17 +268,17 @@ class Evaluator(Callback):
     for i in range(steps):
       [X_test, y_test, _, _], _ = next(generator)
       y_pred = self.base_model.predict(X_test)
-      shape = y_pred[:, 2:, :].shape
-      ctc_decode = K.ctc_decode(y_pred[:, 2:, :], input_length=np.ones(shape[0]) * shape[1])[0][0]
-      out = K.get_value(ctc_decode)[:, :max_len]
+      shape = y_pred[:, :, :].shape
+      ctc_decode = K.ctc_decode(y_pred[:, :, :], input_length=np.ones(shape[0]) * shape[1])[0][0]
+      out = K.get_value(ctc_decode)[:, :n_len]
       print(y_test[0], out[0])
-      if out.shape[1] == max_len:
+      if out.shape[1] == n_len:
         batch_acc += (y_test == out).all(axis=1).mean()
     return batch_acc / steps
 
 
 if __name__ == '__main__':
-  # crnn = CRNN(num_class=n_class, rnn_units=128, batch_size=128)
-  # crnn._build_network()
-  # crnn.train()
-  next(gen(1))
+  crnn = CRNN(num_class=n_class, rnn_units=128, batch_size=32)
+  crnn._build_network()
+  crnn.train()
+  # next(gen(1))
