@@ -19,10 +19,10 @@ width, height, max_len, n_class = 28, 28, 8, len(characters) + 1
 
 datagen = ImageDataGenerator(
   rotation_range=0.4,
-  width_shift_range=0.04,
-  height_shift_range=0.04,
+  width_shift_range=0.2,
+  height_shift_range=0.2,
   shear_range=0.2,
-  zoom_range=0.0,
+  zoom_range=0.2,
   fill_mode='nearest')
 
 
@@ -94,7 +94,7 @@ def gen(batch_size=128, gene=1, sigma=3):
       # print(X[i, 0: shape[0], 0: shape[1], :].shape, shape[0], shape[1])
       X[i, 0: shape[0], 0: shape[1], :] = tmp
       y[i, 0: len(random_str)] = [characters.find(x) for x in random_str]
-    plot(X[0], y[0])
+    # plot(X[0], y[0])
     i = 0
     XX = None
     yy = None
@@ -283,7 +283,7 @@ class Evaluator(Callback):
 
 
 if __name__ == '__main__':
-  # crnn = CRNN(num_class=n_class, rnn_units=128, batch_size=128)
-  # crnn._build_network()
-  # crnn.train()
-  next(gen(1))
+  crnn = CRNN(num_class=n_class, rnn_units=128, batch_size=32)
+  crnn._build_network()
+  crnn.train()
+  # next(gen(1))
