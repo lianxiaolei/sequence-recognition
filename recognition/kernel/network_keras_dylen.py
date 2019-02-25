@@ -244,10 +244,10 @@ class CRNN(object):
 
   def train(self):
     self.early_stopping = EarlyStopping(monitor='val_loss', patience=30)
-    self.history = self.model.fit_generator(gen(self.batch_size, gene=8), steps_per_epoch=100,
+    self.history = self.model.fit_generator(gen(self.batch_size, gene=1), steps_per_epoch=100,
                                             epochs=20,
                                             callbacks=[Evaluator(self.base_model), self.early_stopping],
-                                            validation_data=gen(self.batch_size, gene=8), validation_steps=20)
+                                            validation_data=gen(self.batch_size, gene=1), validation_steps=20)
 
   def save_model(self):
     self.base_model.save('./crnn_model_10.h5')
