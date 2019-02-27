@@ -24,6 +24,9 @@ class CRNN():
 
   def __init__(self, num_class):
     self.num_class = num_class
+    self.interval_loss = 100
+    self.FLAGS = tf.flags.FLAGS
+    self.batch_size = self.FLAGS.batch_size
 
   def _init_variable(self, shape, name=None):
     """
@@ -33,7 +36,7 @@ class CRNN():
         name: A string. The name in tensorflow graph of the initiated variable.
     Return: A variable.
     """
-    return tf.Variable(tf.random_normal(shape, stddev=0.01), name=name)
+    return tf.Variable(tf.truncated_normal(shape, mean=0., stddev=1.), name=name)
 
   def image2head(self, x):
     for i in range(3):
@@ -57,11 +60,13 @@ class CRNN():
 
   def head2tail(self, x):
     self.rnn_units = self.FLAGS.rnn_units
-
     shape = x.get_shape().as_list()
     x = tf.reshape(x, shape=[-1, shape[1], shape[2] * shape[3]])
-    x = slim.fully_connected(x, self.rnn_units,
-                             weights_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    self.w0 = self._init_variable(shape=[self.batch_size, shape[2] * shape[3], self.rnn_units], name='w0')
+    self.b0 = self._init_variable(shape=[self.rnn_units, ], name='b0')
+    x = tf.nn.xw_plus_b(x, self.w0, self.b0, name='dense0')
+    # x = slim.fully_connected(x, self.rnn_units,
+    #                          weights_initializer=tf.truncated_normal_initializer(stddev=0.01))
     x = tf.layers.batch_normalization(x, name='bn2')
     x = tf.nn.relu(x)
 
@@ -108,7 +113,12 @@ class CRNN():
     # cell = rnn.MultiRNNCell(fw_cell_list)
     # x, _ = tf.nn.dynamic_rnn(cell, x, self.seq_len, dtype=tf.float32)
 
-    x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
+    self.w1 = self._init_variable(shape=[self.batch_size, self.rnn_units * 2, self.num_class], name='w1')
+    self.b1 = self._init_variable(shape=[self.num_class, ], name='b1')
+    x = tf.nn.xw_plus_b(x, self.w1, self.b1, name='dense1')
+    x = tf.nn.softmax(x, name='bottom_softmax')
+
+    # x = slim.fully_connected(x, self.num_class, activation_fn=tf.nn.softmax)
 
     # time major 模式需要的input shape:(max_time x batch_size x num_classes)
     x = tf.transpose(x, (1, 0, 2))
@@ -143,6 +153,7 @@ class CRNN():
 
     # 定义CNN kernels
     with tf.name_scope(name='cnn_kernels'):
+
       kernel_shape = [3, 3, 1, 32]
       self.w00 = self._init_variable(kernel_shape, name='conv_w00')
       for i in range(3):
@@ -161,7 +172,6 @@ class CRNN():
   def architecture(self, input_shape, lr=1e-2, epoch=1e1, mode='train'):
     # 构建图
     # with tf.Graph().as_default():
-    self.FLAGS = tf.flags.FLAGS
 
     config = tf.ConfigProto(
       allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
@@ -332,6 +342,10 @@ class CRNN():
 
     # time_str = datetime.datetime.now().isoformat()
     # print("{}:step{},loss:{},acc:{},decoded:{}".format(time_str, step, loss, accuracy, self.decoded[0]))
+    if self.interval_loss > loss:
+      self.interval_loss = loss
+      self.sess.run(tf.assign(self.global_step, tf.add(self.global_step, 1)))
+      print("step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
     print("step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
 
     # self.train_summary_writer.add_summary(summaries, step)
@@ -390,7 +404,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   # 初始化学习速率
-  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-2, 'Learning rate initial value')
+  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
   tf.app.flags.DEFINE_integer('DECAY_STEPS', 5000, 'DECAY_STEPS')
   tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
   tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.9, 'LEARNING_RATE_DECAY_FACTOR')
