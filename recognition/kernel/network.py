@@ -359,7 +359,7 @@ class CRNN():
       # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       for step in range(32):
         inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-        plot(inputs[0], decode_sparse_tensor(sparse_targets)[0])
+        # plot(inputs[0], decode_sparse_tensor(sparse_targets)[0])
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
         current_step = tf.train.global_step(self.sess, self.global_step)

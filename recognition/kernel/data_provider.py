@@ -80,7 +80,7 @@ def get_next_batch(batch_size=128, gene=1):
     tmp = tmp.transpose(1, 0, 2)
 
     X[i] = tmp
-    y[i] = [str(characters.find(x)) for x in random_str]
+    y[i] = [characters.find(x) for x in random_str]
 
   # i = 0
   # XX = None
