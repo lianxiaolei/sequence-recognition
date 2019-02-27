@@ -175,28 +175,30 @@ def tfrecord2img(path, epoch_batch_size=1):
   # print('Type of data.map.batch', type(data.map(_read_features).batch(epoch_batch_size)))
   # 调用传入的函数一条一条的解出数据最后组成batch
   data = data.map(_read_features).batch(epoch_batch_size)
-  data = data.map(_read_features).shuffle(epoch_batch_size)
+  # data = data.map(_read_features).shuffle(epoch_batch_size)
 
   iterator = data.make_one_shot_iterator()
   next_element = iterator.get_next()
 
   with tf.Session() as sess:
-    # coord = tf.train.Coordinator()
-    # threads = tf.train.start_queue_runners(coord=coord)
-    # try:
-    #   while not coord.should_stop():
-    #     img, y = sess.run(next_element)
-    #
-    # except tf.errors.OutOfRangeError:
-    #   print('Done training -- epoch limit reached')
-    # finally:
-    #   coord.request_stop()
-    # coord.join(threads)
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(coord=coord)
+    try:
+      while not coord.should_stop():
+        img, y = sess.run(next_element)
+        y = list(map(lambda seq: seq.decode('utf8'), y))
+        y = [[int(num) for num in item] for item in y]
+        y = sparse_tuple_from(y, dtype=np.int32)
+    except tf.errors.OutOfRangeError:
+      print('Done training -- epoch limit reached')
+    finally:
+      coord.request_stop()
+    coord.join(threads)
 
-    img, y = sess.run(next_element)
-    y = list(map(lambda seq: seq.decode('utf8'), y))
-    y = [[int(num) for num in item] for item in y]
-    y = sparse_tuple_from(y, dtype=np.int32)
+    # img, y = sess.run(next_element)
+    # y = list(map(lambda seq: seq.decode('utf8'), y))
+    # y = [[int(num) for num in item] for item in y]
+    # y = sparse_tuple_from(y, dtype=np.int32)
     # while True:
     #   try:
     #     img, y = sess.run(next_element)
@@ -211,11 +213,11 @@ def tfrecord2img(path, epoch_batch_size=1):
 
 
 if __name__ == '__main__':
-  # img2tfrecord('../../dataset/sequence.tfrecord', batch_size=512, data_path='../../dataset/nums')
-  import time
-  tmp_time = time.time()
-  for i in range(4):
-    imgs, labels = tfrecord2img('../../dataset/sequence.tfrecord', epoch_batch_size=128)
-    print('Decode tfrecord to normal data with data shape:%s and label length:%s.' % (imgs.shape, len(labels)))
-
-  print('time cost:', time.time() - tmp_time)
+  img2tfrecord('../../dataset/sequences.tfrecord', batch_size=512 * 128, data_path='../../dataset/nums')
+  # import time
+  # tmp_time = time.time()
+  # for i in range(4):
+  #   imgs, labels = tfrecord2img('../../dataset/sequence.tfrecord', epoch_batch_size=128)
+  #   print('Decode tfrecord to normal data with data shape:%s and label length:%s.' % (imgs.shape, len(labels)))
+  #
+  # print('time cost:', time.time() - tmp_time)
