@@ -370,9 +370,9 @@ class CRNN():
   def run(self):
     inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
     for epoch in range(128):
-      inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       for step in range(32):
-        inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+        # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
         # plot(inputs[0], decode_sparse_tensor(sparse_targets)[0])
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
