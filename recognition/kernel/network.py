@@ -151,7 +151,7 @@ class CRNN():
       input_shape[3] = channel
     return input_shape
 
-  def _build_network(self, input_shape, lr=1e-2, epoch=1e1, mode='train'):
+  def _build_network(self, input_shape, mode='train'):
     # 构建整个网络
     # 定义placeholder
     # with tf.name_scope(name='ph'):
@@ -179,7 +179,7 @@ class CRNN():
       # self.head = self.X
       self.output = self.head2tail(self.head)  # self.output == self.tail
 
-  def architecture(self, input_shape, lr=1e-2, epoch=1e1, mode='train'):
+  def architecture(self, input_shape, mode='train'):
     # 构建图
     # with tf.Graph().as_default():
 
@@ -190,7 +190,7 @@ class CRNN():
     self.sess = tf.Session(config=config)
 
     with self.sess.as_default():
-      self._build_network(input_shape, lr=lr, epoch=epoch, mode=mode)
+      self._build_network(input_shape, mode=mode)
       # [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
 
       with tf.name_scope('accuracy'):
