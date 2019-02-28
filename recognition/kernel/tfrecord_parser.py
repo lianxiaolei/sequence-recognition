@@ -196,7 +196,7 @@ def tfrecord2img(path, epoch_batch_size=1):
         y = [[int(num) for num in item] for item in y]
         y = sparse_tuple_from(y, dtype=np.int32)
         print(img.shape)
-        plot(img[0,:,:,:], '')
+        plot(img[0, :, :, :], '')
         print(l[0])
     except tf.errors.OutOfRangeError:
       print('Done training -- epoch limit reached')
@@ -222,7 +222,7 @@ def tfrecord2img(path, epoch_batch_size=1):
 
 
 if __name__ == '__main__':
-  img2tfrecord('../../dataset/sequence.tfrecord', batch_size=512, data_path='../../dataset/nums')
+  img2tfrecord('../../dataset/sequences.tfrecord', batch_size=512 * 128, data_path='../../dataset/nums')
   # import time
   # tmp_time = time.time()
   # for i in range(4):
