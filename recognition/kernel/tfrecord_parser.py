@@ -165,6 +165,7 @@ def _read_features(example_proto):
   y = parse_example['label']
 
   img = tf.decode_raw(parse_example['image'], out_type=tf.float64)
+  img = tf.cast(img, tf.float32)
   img = tf.reshape(img, [width, height, 1])
 
   return img, y
