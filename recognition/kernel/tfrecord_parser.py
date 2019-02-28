@@ -72,7 +72,7 @@ def gen(base_path):
   tmp = np.array(get_sequence_img(random_str, base_path=base_path))
   tmp = tmp.reshape(tmp.shape[0], tmp.shape[1], 1)
   tmp = tmp.transpose(1, 0, 2)
-  img = tmp.astype(np.uint8)
+  img = tmp.astype(np.float64)
   print(img.shape)
 
   return img, [characters.find(x) for x in random_str]
