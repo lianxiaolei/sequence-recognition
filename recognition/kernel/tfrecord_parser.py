@@ -8,7 +8,7 @@ from recognition.kernel.data_provider import *
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 400, 80, 10, len(characters) + 1
+width, height, n_len, n_class = 280, 28, 10, len(characters) + 1
 
 
 def generate():
@@ -52,8 +52,8 @@ def get_sequence_img(chars, base_path):
   x = get_img_by_char(chars[0], base_path=base_path)
   for i in range(1, len(chars)):
     x = np.hstack([x, get_img_by_char(chars[i], base_path=base_path)])
-  x = cv2.resize(x, (400, 80))
-  x = skimage.util.random_noise(x, mode='gaussian', clip=True)
+  x = cv2.resize(x, (width, height))
+  # x = skimage.util.random_noise(x, mode='gaussian', clip=True)
   return x
 
 
@@ -64,9 +64,16 @@ def gen(base_path):
   """
   random_str = ''.join([random.choice(characters) for j in range(n_len)])
 
-  img = np.array(get_sequence_img(random_str, base_path=base_path))
+  # img = np.array(get_sequence_img(random_str, base_path=base_path))
   # convert img to uint8
-  img = img.astype(np.uint8)
+  # img = img.astype(np.uint8)
+  # img = img.transpose(1, 0, 2)
+
+  tmp = np.array(get_sequence_img(random_str, base_path=base_path))
+  tmp = tmp.reshape(tmp.shape[0], tmp.shape[1], 1)
+  tmp = tmp.transpose(1, 0, 2)
+  img = tmp.astype(np.uint8)
+  print(img.shape)
 
   return img, [characters.find(x) for x in random_str]
 
@@ -159,7 +166,7 @@ def _read_features(example_proto):
   y = parse_example['label']
 
   img = tf.decode_raw(parse_example['image'], out_type=tf.uint8)
-  img = tf.reshape(img, [80, 400, 1])
+  img = tf.reshape(img, [height, width, 1])
 
   return img, y
 
@@ -213,7 +220,7 @@ def tfrecord2img(path, epoch_batch_size=1):
 
 
 if __name__ == '__main__':
-  img2tfrecord('../../dataset/sequences.tfrecord', batch_size=512 * 128, data_path='../../dataset/nums')
+  img2tfrecord('../../dataset/sequence.tfrecord', batch_size=5, data_path='../../dataset/nums')
   # import time
   # tmp_time = time.time()
   # for i in range(4):

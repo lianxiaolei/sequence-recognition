@@ -14,7 +14,7 @@ from recognition.kernel.data_provider import *
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 280, 28, 8, len(characters) + 1
+width, height, n_len, n_class = 280, 28, 10, len(characters) + 1
 
 
 class CRNN():
@@ -22,11 +22,21 @@ class CRNN():
 
   """
 
-  def __init__(self, num_class):
+  def __init__(self, num_class, input_batch, sparse_target_batch, seqlen_batch):
     self.num_class = num_class
     self.interval_loss = 100
     self.FLAGS = tf.flags.FLAGS
     self.batch_size = self.FLAGS.batch_size
+    with tf.name_scope(name='ph'):
+      self.X = input_batch
+      self.y = sparse_target_batch
+      self.seq_len = seqlen_batch
+      self.keep_prob = tf.placeholder(tf.float32, name='kp')
+  # self.X = tf.placeholder(tf.float32, shape=input_shape, name='x')
+  # self.y = tf.sparse_placeholder(tf.int32, name='y')  # 不指定shape时，可以feed任意shape
+  # self.seq_len = tf.placeholder(tf.int32, [None], name='seq_len')
+
+  # self.keep_prob = tf.placeholder(tf.float32, name='kp')
 
   def _init_variable(self, shape, name=None):
     """
@@ -144,12 +154,12 @@ class CRNN():
   def _build_network(self, input_shape, lr=1e-2, epoch=1e1, mode='train'):
     # 构建整个网络
     # 定义placeholder
-    with tf.name_scope(name='ph'):
-      self.X = tf.placeholder(tf.float32, shape=input_shape, name='x')
-      self.y = tf.sparse_placeholder(tf.int32, name='y')  # 不指定shape时，可以feed任意shape
-      self.seq_len = tf.placeholder(tf.int32, [None], name='seq_len')
+    # with tf.name_scope(name='ph'):
+      # self.X = tf.placeholder(tf.float32, shape=input_shape, name='x')
+      # self.y = tf.sparse_placeholder(tf.int32, name='y')  # 不指定shape时，可以feed任意shape
+      # self.seq_len = tf.placeholder(tf.int32, [None], name='seq_len')
 
-      self.keep_prob = tf.placeholder(tf.float32, name='kp')
+      # self.keep_prob = tf.placeholder(tf.float32, name='kp')
 
     # 定义CNN kernels
     with tf.name_scope(name='cnn_kernels'):
@@ -186,6 +196,8 @@ class CRNN():
       with tf.name_scope('accuracy'):
         # 计算误差
         #  time_major默认为True
+        print('output shape:', self.output.shape)
+        print('label  shape:', self.y.shape)
         self.loss = tf.reduce_mean(
           tf.nn.ctc_loss(labels=self.y, inputs=self.output,
                          sequence_length=self.seq_len, preprocess_collapse_repeated=True))
@@ -278,10 +290,7 @@ class CRNN():
     # decoded, log_prob = tf.nn.ctc_greedy_decoder(self.output,
     #                                              test_seq_len)
 
-    test_feed = {self.X: test_inputs,
-                 self.y: test_targets,
-                 self.seq_len: test_seq_len,
-                 self.keep_prob: 1.}
+    test_feed = {self.keep_prob: 1.}
     dd, log_probs = self.sess.run([decoded[0], log_prob],
                                   feed_dict=test_feed)
     self.calc_accuracy(dd, test_targets)
@@ -327,12 +336,11 @@ class CRNN():
 
   def train_step(self, inputs, sparse_targets, seq_len):
     feed_dict = {
-      self.X: inputs,
-      self.y: sparse_targets,
+      # self.X: inputs,
+    #   self.y: sparse_targets,
       self.keep_prob: self.FLAGS.dropout_keep_prob,
-      self.seq_len: seq_len
+    #   self.seq_len: seq_len
     }
-
     _, step, summaries, loss, accuracy = self.sess.run(
       [self.train_op, self.global_step,
        self.train_summary_op, self.loss, self.acc_op
@@ -354,10 +362,10 @@ class CRNN():
 
   def dev_step(self, inputs, sparse_targets, seq_len):
     feed_dict = {
-      self.X: inputs,
-      self.y: sparse_targets,
+      # self.X: inputs,
+      # self.y: sparse_targets,
       self.keep_prob: 1.,
-      self.seq_len: seq_len
+      # self.seq_len: seq_len
     }
 
     _, step, summaries, loss, accuracy = self.sess.run(
@@ -369,6 +377,7 @@ class CRNN():
 
   def run(self):
     inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+
     for epoch in range(128):
       # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       for step in range(32):
@@ -390,6 +399,79 @@ class CRNN():
       # self._accuracy()
 
 
+def run_multiprocess(path, batch_size):
+  """
+
+  :param epoch_batch_size:
+  :return:
+  """
+
+  def _read_features(example_proto):
+    """
+
+    :param example_proto:
+    :return:
+    """
+    dic = dict()
+    dic['image'] = tf.FixedLenFeature(shape=[], dtype=tf.string)
+    dic['label'] = tf.FixedLenFeature(shape=[], dtype=tf.string)
+
+    parse_example = tf.parse_single_example(
+      serialized=example_proto, features=dic)
+
+    # img = parse_example['image']
+    y = parse_example['label']
+
+    img = tf.decode_raw(parse_example['image'], out_type=tf.uint8)
+    img = tf.reshape(img, [width, height, 1])
+    img = tf.cast(img, tf.float32)
+    return img, y
+
+  filename_queue = tf.train.string_input_producer([path], shuffle=False)
+  reader = tf.TFRecordReader()
+  _, serialized_example = reader.read(filename_queue)
+
+  seq_len = np.ones(batch_size) * 10
+
+  image, label = _read_features(serialized_example)
+  image_batch, label_batch = tf.train.batch([image, label], batch_size=batch_size)
+  inputs = image_batch
+  sparse_targets = tf.string_split(label_batch, delimiter='')
+  sparse_targets = tf.SparseTensor(sparse_targets.indices,
+                                   tf.strings.to_number(sparse_targets.values, tf.int32),
+                                   sparse_targets.dense_shape)
+  print('sparse_targets shape:', sparse_targets.shape)
+
+  # 构建网络
+  print('Begin build model...')
+  crnn = CRNN(n_class, inputs, sparse_targets, seq_len)
+  crnn.architecture(input_shape=[None, width, height, 1])
+  print('Build model done!')
+
+
+  coord = tf.train.Coordinator()
+  threads = tf.train.start_queue_runners(sess=crnn.sess, coord=coord)
+  try:
+    while not coord.should_stop():
+
+      for epoch in range(128):
+        for step in range(32):
+          crnn.train_step(inputs, sparse_targets, tf.convert_to_tensor(seq_len))
+          current_step = tf.train.global_step(crnn.sess, crnn.global_step)
+          if current_step % crnn.FLAGS.evaluate_every == 0:
+            print("\nAfter epoch %s Evaluation:" % epoch)
+            # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+            # crnn.dev_step(inputs, sparse_targets, seq_len)
+            print('Evaluation Done\n')
+            # crnn._accuracy(inputs, sparse_targets, seq_len)
+
+  except tf.errors.OutOfRangeError:
+    print('Done training -- epoch limit reached')
+  finally:
+    coord.request_stop()
+  coord.join(threads)
+
+
 if __name__ == '__main__':
   tf.app.flags.DEFINE_boolean("allow_soft_placement",
                               True, "Allow device soft device placement")
@@ -409,8 +491,8 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
   tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.9, 'LEARNING_RATE_DECAY_FACTOR')
 
-  crnn = CRNN(n_class)
-  crnn.architecture(input_shape=[None, width, height, 1])
-  print('Build model done!')
-  crnn.run()
+  # crnn = CRNN(n_class)
+  # crnn.architecture(input_shape=[None, width, height, 1])
+  # print('Build model done!')
+  run_multiprocess('../../dataset/sequence.tfrecord', batch_size=32)
   print('Training done!')
