@@ -378,9 +378,9 @@ class CRNN():
   def run(self):
     inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
 
-    for epoch in range(128):
+    for epoch in range(1024):
       # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-      for step in range(32):
+      for step in range(512):
         # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
         # plot(inputs[0], decode_sparse_tensor(sparse_targets)[0])
         # print('sequence length', seq_len)
@@ -478,11 +478,11 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
-                              32, "Batch Size (default: 64)")
+                              128, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             0.75, "Dropout keep probability (default: 0.5)")
   tf.app.flags.DEFINE_integer("evaluate_every",
-                              10, "Evaluate model on dev set after this many steps (default: 100)")
+                              100, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   # 初始化学习速率
