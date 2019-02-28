@@ -223,11 +223,11 @@ def tfrecord2img(path, epoch_batch_size=1):
 
 
 if __name__ == '__main__':
-  # img2tfrecord('../../dataset/sequence.tfrecord', batch_size=5, data_path='../../dataset/nums')
-  import time
-  tmp_time = time.time()
-  for i in range(4):
-    imgs, labels = tfrecord2img('../../dataset/sequence.tfrecord', epoch_batch_size=128)
-    print('Decode tfrecord to normal data with data shape:%s and label length:%s.' % (imgs.shape, len(labels)))
-
-  print('time cost:', time.time() - tmp_time)
+  img2tfrecord('../../dataset/sequence.tfrecord', batch_size=512, data_path='../../dataset/nums')
+  # import time
+  # tmp_time = time.time()
+  # for i in range(4):
+  #   imgs, labels = tfrecord2img('../../dataset/sequence.tfrecord', epoch_batch_size=128)
+  #   print('Decode tfrecord to normal data with data shape:%s and label length:%s.' % (imgs.shape, len(labels)))
+  #
+  # print('time cost:', time.time() - tmp_time)
