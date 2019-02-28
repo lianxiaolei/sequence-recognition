@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import skimage
 import random
-from recognition.kernel.data_provider import *
+# from recognition.kernel.data_provider import *
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
@@ -170,6 +170,29 @@ def _read_features(example_proto):
 
   return img, y
 
+def sparse_tuple_from(sequences, dtype=np.int32):
+  """
+  Create a sparse representention of x.
+  Args:
+      sequences: A list of lists of type dtype where each element is a sequence
+      dtype: Type of SparseTensor
+  Returns:
+      A tuple with (indices, values, shape)
+  """
+  indices = []
+  values = []
+
+  for n, seq in enumerate(sequences):
+    # print(n, len(seq))
+    indices.extend(zip([n] * len(seq), range(len(seq))))
+    values.extend(seq)
+
+  indices = np.asarray(indices, dtype=np.int64)
+  values = np.asarray(values, dtype=dtype)
+  shape = np.asarray([len(sequences), np.asarray(indices).max(0)[1] + 1], dtype=np.int64)
+
+  return indices, values, shape
+
 
 def tfrecord2img(path, epoch_batch_size=1):
   """
@@ -196,9 +219,6 @@ def tfrecord2img(path, epoch_batch_size=1):
         y = list(map(lambda seq: seq.decode('utf8'), l))
         y = [[int(num) for num in item] for item in y]
         y = sparse_tuple_from(y, dtype=np.int32)
-        print(img.shape)
-        plot(img[0, :, :, :], '')
-        print(l[0])
     except tf.errors.OutOfRangeError:
       print('Done training -- epoch limit reached')
     finally:
