@@ -399,12 +399,14 @@ class CRNN():
       # self._accuracy()
 
 
-def run_multiprocess(path, batch_size):
+def run_multiprocess(path):
   """
 
   :param epoch_batch_size:
   :return:
   """
+
+  batch_size = tf.flags.FLAGS.batch_size
 
   def _read_features(example_proto):
     """
@@ -494,5 +496,5 @@ if __name__ == '__main__':
   # crnn = CRNN(n_class)
   # crnn.architecture(input_shape=[None, width, height, 1])
   # print('Build model done!')
-  run_multiprocess('../../dataset/sequence.tfrecord', batch_size=32)
+  run_multiprocess('../../dataset/sequence.tfrecord')
   print('Training done!')
