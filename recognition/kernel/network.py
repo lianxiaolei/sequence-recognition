@@ -489,9 +489,9 @@ if __name__ == '__main__':
                               128, "Rnn Units")
   # 初始化学习速率
   tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
-  tf.app.flags.DEFINE_integer('DECAY_STEPS', 5000, 'DECAY_STEPS')
+  tf.app.flags.DEFINE_integer('DECAY_STEPS', 500000, 'DECAY_STEPS')
   tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
-  tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.9, 'LEARNING_RATE_DECAY_FACTOR')
+  tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.0, 'LEARNING_RATE_DECAY_FACTOR')
 
   # crnn = CRNN(n_class)
   # crnn.architecture(input_shape=[None, width, height, 1])
