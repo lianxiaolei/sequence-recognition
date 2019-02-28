@@ -40,7 +40,7 @@ def get_img_by_char(char, base_path):
 
   file = files[rdm]
   path = os.path.join(path, file)
-  return cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+  return cv2.imread(path, cv2.IMREAD_GRAYSCALE) / 255
 
 
 def get_sequence_img(chars, base_path):
