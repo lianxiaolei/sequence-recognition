@@ -425,7 +425,6 @@ def run_multiprocess(path, batch_size):
     img = tf.decode_raw(parse_example['image'], out_type=tf.float64)
     img = tf.cast(img, tf.float32)
     img = tf.reshape(img, [width, height, 1])
-    img = tf.cast(img, tf.float64)
     return img, y
 
   filename_queue = tf.train.string_input_producer([path], shuffle=False)
