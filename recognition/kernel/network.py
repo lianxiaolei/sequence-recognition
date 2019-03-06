@@ -189,76 +189,80 @@ class CRNN():
 
     self.sess = tf.Session(config=config)
 
-    with self.sess.as_default():
-      self._build_network(input_shape, mode=mode)
+    self._build_network(input_shape, mode=mode)
+
+    with tf.name_scope('accuracy'):
+      # 计算误差
+      #  time_major默认为True
+      print('output shape:', self.output.shape)
+      print('label  shape:', self.y.shape)
+      # self.loss = tf.reduce_mean(
+      #   tf.nn.ctc_loss(labels=self.y, inputs=self.output,
+      #                  sequence_length=self.seq_len, preprocess_collapse_repeated=True))
+      self.loss = tf.nn.ctc_loss(labels=self.y, inputs=self.output,
+                                 sequence_length=self.seq_len, preprocess_collapse_repeated=True)
+      self.cost = tf.reduce_mean(self.loss)
+
+      #  time_major默认为True
+      self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
+                                                                  merge_repeated=False, top_paths=1)
+      # self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(self.output, self.seq_len)
+
+      concat_indices = None
+      concat_values = None
+      accelerate_indices = 0
+
+      for i in range(len(self.decoded)):
+        decoded = self.decoded[i]
+        if i == 0:
+          concat_indices = decoded.indices
+          concat_values = decoded.values
+        else:
+          decoded_indices = tf.concat([tf.expand_dims(decoded.indices[:, 0] + accelerate_indices, axis=-1),
+                                       tf.expand_dims(decoded.indices[:, 1], axis=-1)], axis=1)
+          concat_indices = tf.concat([concat_indices, decoded_indices], axis=0)
+          concat_values = tf.concat([concat_values, decoded.values], axis=0)
+
+        accelerate_indices += decoded.shape[0]
+
+      first_dim = self.FLAGS.batch_size
+      second_dim = tf.reduce_max(self.seq_len)
+
+      concat_values = tf.cast(concat_values, tf.int32)
+
+      print('Informations  \noutput:{}\ndecoded:{},\nseq_len:{},'
+            '\nconcat_indices:{},\nconcat_values:{}'
+            .format(self.output, self.decoded, self.seq_len, concat_indices, concat_values))
+      print('first dimension:{},\nsecond dimension:{}'.format(first_dim, second_dim))
+
+      decoded_tensor = tf.SparseTensor(indices=concat_indices, values=concat_values,
+                                       dense_shape=[first_dim, second_dim])
+
+      # 使用编辑距离计算准确率
+      edit_distance = tf.edit_distance(decoded_tensor, self.y, name='edit_distance')
+      self.acc_op = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_mean(edit_distance), name='subtract')
+
+    self.global_step = tf.Variable(0, name='global_step', trainable=True)
+    self.learning_rate = tf.train.exponential_decay(self.FLAGS.INITIAL_LEARNING_RATE,
+                                                    self.global_step,
+                                                    self.FLAGS.DECAY_STEPS,
+                                                    self.FLAGS.LEARNING_RATE_DECAY_FACTOR,
+                                                    staircase=True)
+
+    self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
+    self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
+    self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step)
+
+    # self.train_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
+    #   .minimize(self.loss, global_step=self.global_step)
+
+    # 开始记录信息
+    self.summary()
+
+    self.sess.run(tf.global_variables_initializer())
+
+    # with self.sess.as_default():
       # [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
-
-      with tf.name_scope('accuracy'):
-        # 计算误差
-        #  time_major默认为True
-        print('output shape:', self.output.shape)
-        print('label  shape:', self.y.shape)
-        self.loss = tf.reduce_mean(
-          tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-                         sequence_length=self.seq_len, preprocess_collapse_repeated=True))
-
-        #  time_major默认为True
-        self.decoded, self.log_prob = tf.nn.ctc_beam_search_decoder(self.output, self.seq_len,
-                                                                    merge_repeated=False, top_paths=1)
-        # self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(self.output, self.seq_len)
-
-        concat_indices = None
-        concat_values = None
-        accelerate_indices = 0
-
-        for i in range(len(self.decoded)):
-          decoded = self.decoded[i]
-          if i == 0:
-            concat_indices = decoded.indices
-            concat_values = decoded.values
-          else:
-            decoded_indices = tf.concat([tf.expand_dims(decoded.indices[:, 0] + accelerate_indices, axis=-1),
-                                         tf.expand_dims(decoded.indices[:, 1], axis=-1)], axis=1)
-            concat_indices = tf.concat([concat_indices, decoded_indices], axis=0)
-            concat_values = tf.concat([concat_values, decoded.values], axis=0)
-
-          accelerate_indices += decoded.shape[0]
-
-        first_dim = self.FLAGS.batch_size
-        second_dim = tf.reduce_max(self.seq_len)
-
-        concat_values = tf.cast(concat_values, tf.int32)
-
-        print('Informations  \noutput:{}\ndecoded:{},\nseq_len:{},'
-              '\nconcat_indices:{},\nconcat_values:{}'
-              .format(self.output, self.decoded, self.seq_len, concat_indices, concat_values))
-        print('first dimension:{},\nsecond dimension:{}'.format(first_dim, second_dim))
-
-        decoded_tensor = tf.SparseTensor(indices=concat_indices, values=concat_values,
-                                         dense_shape=[first_dim, second_dim])
-
-        # 使用编辑距离计算准确率
-        edit_distance = tf.edit_distance(decoded_tensor, self.y, name='edit_distance')
-        self.acc_op = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_mean(edit_distance), name='subtract')
-
-      self.global_step = tf.Variable(0, name='global_step', trainable=True)
-      self.learning_rate = tf.train.exponential_decay(self.FLAGS.INITIAL_LEARNING_RATE,
-                                                      self.global_step,
-                                                      self.FLAGS.DECAY_STEPS,
-                                                      self.FLAGS.LEARNING_RATE_DECAY_FACTOR,
-                                                      staircase=True)
-
-      self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
-      self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
-      self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step)
-
-      # self.train_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate) \
-      #   .minimize(self.loss, global_step=self.global_step)
-
-      # 开始记录信息
-      self.summary()
-
-      self.sess.run(tf.global_variables_initializer())
 
   def calc_accuracy(self, decode_list, test_target):
     original_list = decode_sparse_tensor(test_target)
@@ -343,20 +347,20 @@ class CRNN():
     }
     _, step, summaries, loss, accuracy = self.sess.run(
       [self.train_op, self.global_step,
-       self.train_summary_op, self.loss, self.acc_op
+       self.train_summary_op, self.cost, self.acc_op
        ],
       feed_dict=feed_dict
     )
 
     # time_str = datetime.datetime.now().isoformat()
     # print("{}:step{},loss:{},acc:{},decoded:{}".format(time_str, step, loss, accuracy, self.decoded[0]))
-    if self.interval_loss > loss:
-      self.interval_loss = loss
-      self.sess.run(tf.assign(self.global_step, tf.add(self.global_step, 1)))
-      print("step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
+    # if self.interval_loss > loss:
+    #   self.interval_loss = loss
+    #   self.sess.run(tf.assign(self.global_step, tf.add(self.global_step, 1)))
+    #   print("step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
     print("step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
 
-    # self.train_summary_writer.add_summary(summaries, step)
+    self.train_summary_writer.add_summary(summaries, step)
     if step % self.FLAGS.batch_size == 0:
       print('epoch:{}'.format(step // self.FLAGS.batch_size))
 
@@ -370,18 +374,17 @@ class CRNN():
 
     _, step, summaries, loss, accuracy = self.sess.run(
       [self.train_op, self.global_step,
-       self.dev_summary_op, self.loss, self.acc_op
+       self.dev_summary_op, self.cost, self.acc_op
        ],
       feed_dict=feed_dict
     )
 
   def run(self):
-    inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-
+    # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
     for epoch in range(1024):
       # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       for step in range(512):
-        # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+        inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
         # plot(inputs[0], decode_sparse_tensor(sparse_targets)[0])
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
@@ -475,21 +478,30 @@ def run_multiprocess(path):
 
 
 if __name__ == '__main__':
+  tmp_path = '../../run_temp/'
+  rmeds = os.listdir(tmp_path)
+  for rmed in rmeds:
+    try:
+      os.rmdir(os.path.join(tmp_path, rmed))
+    except Exception as e:
+      os.remove(os.path.join(tmp_path, rmed))
+    print('Removed {} done.'.format(os.path.join(tmp_path, rmed)))
+
   tf.app.flags.DEFINE_boolean("allow_soft_placement",
                               True, "Allow device soft device placement")
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
-                              128, "Batch Size (default: 64)")
+                              32, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
-                            0.75, "Dropout keep probability (default: 0.5)")
+                            0.85, "Dropout keep probability")
   tf.app.flags.DEFINE_integer("evaluate_every",
                               100, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   # 初始化学习速率
   tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
-  tf.app.flags.DEFINE_integer('DECAY_STEPS', 500000, 'DECAY_STEPS')
+  tf.app.flags.DEFINE_integer('DECAY_STEPS', 5000000, 'DECAY_STEPS')
   tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
   tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.0, 'LEARNING_RATE_DECAY_FACTOR')
 
