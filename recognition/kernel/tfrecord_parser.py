@@ -187,7 +187,7 @@ def sparse_tuple_from(sequences, dtype=np.int32):
     indices.extend(zip([n] * len(seq), range(len(seq))))
     values.extend(seq)
 
-  indices = np.asarray(indices, dtype=np.int64)
+  indices = np.asarray(indices, dtype=dtype)
   values = np.asarray(values, dtype=dtype)
   shape = np.asarray([len(sequences), np.asarray(indices).max(0)[1] + 1], dtype=np.int64)
 
@@ -225,29 +225,43 @@ def tfrecord2img(path, epoch_batch_size=1):
       coord.request_stop()
     coord.join(threads)
 
-    # img, y = sess.run(next_element)
-    # y = list(map(lambda seq: seq.decode('utf8'), y))
-    # y = [[int(num) for num in item] for item in y]
-    # y = sparse_tuple_from(y, dtype=np.int32)
-    # while True:
-    #   try:
-    #     img, y = sess.run(next_element)
-    #     y = list(map(lambda seq: seq.decode('utf8'), y))
-    #     y = [[int(num) for num in item] for item in y]
-    #     print('Decoded y:', y)
-    #
-    #   except Exception as e:
-    #     break
+  return img, y
+
+
+def to_img_test(path, epoch_batch_size=1):
+  data = tf.data.TFRecordDataset(path)
+  # print('Type of data.map', type(data.map(_read_features)))
+  # print('Type of data.map.batch', type(data.map(_read_features).batch(epoch_batch_size)))
+  # 调用传入的函数一条一条的解出数据最后组成batch
+  data = data.map(_read_features).batch(epoch_batch_size)
+
+  iterator = data.make_one_shot_iterator()
+  next_element = iterator.get_next()
+
+  with tf.Session() as sess:
+    img, y = sess.run(next_element)
+    y = list(map(lambda seq: seq.decode('utf8'), y))
+    y = [[int(num) for num in item] for item in y]
+    y = sparse_tuple_from(y, dtype=np.int32)
+    while True:
+      try:
+        img, y = sess.run(next_element)
+        y = list(map(lambda seq: seq.decode('utf8'), y))
+        y = [[int(num) for num in item] for item in y]
+        print('Decoded y:', y)
+
+      except Exception as e:
+        break
 
   return img, y
 
 
 if __name__ == '__main__':
-  img2tfrecord('../../dataset/sequences.tfrecord', batch_size=512 * 128, data_path='../../dataset/nums')
+  # img2tfrecord('../../dataset/sequence.tfrecord', batch_size=512 * 1, data_path='../../dataset/nums')
   # import time
   # tmp_time = time.time()
-  # for i in range(4):
-  #   imgs, labels = tfrecord2img('../../dataset/sequence.tfrecord', epoch_batch_size=128)
-  #   print('Decode tfrecord to normal data with data shape:%s and label length:%s.' % (imgs.shape, len(labels)))
+  for i in range(4):
+    imgs, labels = tfrecord2img('../../dataset/sequence.tfrecord', epoch_batch_size=128)
+    print('Decode tfrecord to normal data with data shape:%s and label length:%s.' % (imgs.shape, len(labels)))
   #
   # print('time cost:', time.time() - tmp_time)

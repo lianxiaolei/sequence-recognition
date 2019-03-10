@@ -10,6 +10,7 @@ from tensorflow.contrib import rnn
 import datetime
 import time
 from recognition.kernel.data_provider import *
+import shutil
 
 DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
@@ -199,6 +200,8 @@ class CRNN():
       # self.loss = tf.reduce_mean(
       #   tf.nn.ctc_loss(labels=self.y, inputs=self.output,
       #                  sequence_length=self.seq_len, preprocess_collapse_repeated=True))
+      self.output = tf.log(self.output + 1e-7)
+
       self.loss = tf.nn.ctc_loss(labels=self.y, inputs=self.output,
                                  sequence_length=self.seq_len, preprocess_collapse_repeated=True)
       self.cost = tf.reduce_mean(self.loss)
@@ -385,7 +388,6 @@ class CRNN():
       # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
       for step in range(512):
         inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-        # plot(inputs[0], decode_sparse_tensor(sparse_targets)[0])
         # print('sequence length', seq_len)
         self.train_step(inputs, sparse_targets, seq_len)
         current_step = tf.train.global_step(self.sess, self.global_step)
@@ -457,18 +459,29 @@ def run_multiprocess(path):
   coord = tf.train.Coordinator()
   threads = tf.train.start_queue_runners(sess=crnn.sess, coord=coord)
   try:
+    i = 0
     while not coord.should_stop():
 
-      for epoch in range(128):
-        for step in range(32):
-          crnn.train_step(inputs, sparse_targets, tf.convert_to_tensor(seq_len))
-          current_step = tf.train.global_step(crnn.sess, crnn.global_step)
-          if current_step % crnn.FLAGS.evaluate_every == 0:
-            print("\nAfter epoch %s Evaluation:" % epoch)
-            # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-            # crnn.dev_step(inputs, sparse_targets, seq_len)
-            print('Evaluation Done\n')
-            # crnn._accuracy(inputs, sparse_targets, seq_len)
+      i += 1
+      crnn.train_step(inputs, sparse_targets, tf.convert_to_tensor(seq_len))
+      current_step = tf.train.global_step(crnn.sess, crnn.global_step)
+      if current_step % crnn.FLAGS.evaluate_every == 0:
+        print("\nAfter epoch %s Evaluation:" % i)
+        # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+        # crnn.dev_step(inputs, sparse_targets, seq_len)
+        print('Evaluation Done\n')
+        # crnn._accuracy(inputs, sparse_targets, seq_len)
+
+      # for epoch in range(128):
+      #   for step in range(32):
+      #     crnn.train_step(inputs, sparse_targets, tf.convert_to_tensor(seq_len))
+      #     current_step = tf.train.global_step(crnn.sess, crnn.global_step)
+      #     if current_step % crnn.FLAGS.evaluate_every == 0:
+      #       print("\nAfter epoch %s Evaluation:" % epoch)
+      #       # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      #       # crnn.dev_step(inputs, sparse_targets, seq_len)
+      #       print('Evaluation Done\n')
+      #       # crnn._accuracy(inputs, sparse_targets, seq_len)
 
   except tf.errors.OutOfRangeError:
     print('Done training -- epoch limit reached')
@@ -481,10 +494,14 @@ if __name__ == '__main__':
   tmp_path = '../../run_temp/'
   rmeds = os.listdir(tmp_path)
   for rmed in rmeds:
+    joint = os.path.join(tmp_path, rmed)
     try:
-      os.rmdir(os.path.join(tmp_path, rmed))
+      os.rmdir(joint)
     except Exception as e:
-      os.remove(os.path.join(tmp_path, rmed))
+      try:
+        os.remove(joint)
+      except Exception as e:
+        shutil.rmtree(joint)
     print('Removed {} done.'.format(os.path.join(tmp_path, rmed)))
 
   tf.app.flags.DEFINE_boolean("allow_soft_placement",
@@ -492,7 +509,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
-                              32, "Batch Size (default: 64)")
+                              64, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             0.85, "Dropout keep probability")
   tf.app.flags.DEFINE_integer("evaluate_every",
