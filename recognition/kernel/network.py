@@ -517,8 +517,8 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer('rnn_units',
                               256, "Rnn Units")
   # 初始化学习速率
-  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-4, 'Learning rate initial value')
-  tf.app.flags.DEFINE_integer('DECAY_STEPS', 1000, 'DECAY_STEPS')
+  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
+  tf.app.flags.DEFINE_integer('DECAY_STEPS', 10000, 'DECAY_STEPS')
   tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
   tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.0, 'LEARNING_RATE_DECAY_FACTOR')
 
