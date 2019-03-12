@@ -54,12 +54,12 @@ class CRNN():
       # print('Defind layer use kernel {} with name {}'.format('self.w%s0' % i, 'cnn0%s' % i))
       x = tf.nn.conv2d(x, eval('self.w%s0' % i), [1, 1, 1, 1],
                        padding='SAME', name='cnn0%s' % i)
-      x = tf.layers.batch_normalization(x, name='bn0%s' % i)
+      # x = tf.layers.batch_normalization(x, name='bn0%s' % i)
       tf.nn.relu(x)
 
       x = tf.nn.conv2d(x, eval('self.w%s1' % i), [1, 1, 1, 1],
                        padding='SAME', name='cnn1%s' % i)
-      x = tf.layers.batch_normalization(x, name='bn1%s' % i)
+      # x = tf.layers.batch_normalization(x, name='bn1%s' % i)
       tf.nn.relu(x)
 
       print('Use the kernel:', eval('self.w%s0' % i), eval('self.w%s1' % i))
@@ -78,7 +78,7 @@ class CRNN():
     x = tf.nn.xw_plus_b(x, self.w0, self.b0, name='dense0')
     # x = slim.fully_connected(x, self.rnn_units,
     #                          weights_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    x = tf.layers.batch_normalization(x, name='bn2')
+    # x = tf.layers.batch_normalization(x, name='bn2')
     x = tf.nn.relu(x)
 
     # 构建双向叠加RNN
@@ -517,8 +517,8 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   # 初始化学习速率
-  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
-  tf.app.flags.DEFINE_integer('DECAY_STEPS', 5000000, 'DECAY_STEPS')
+  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-4, 'Learning rate initial value')
+  tf.app.flags.DEFINE_integer('DECAY_STEPS', 1000, 'DECAY_STEPS')
   tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
   tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.0, 'LEARNING_RATE_DECAY_FACTOR')
 
