@@ -515,7 +515,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer("evaluate_every",
                               100, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
-                              128, "Rnn Units")
+                              256, "Rnn Units")
   # 初始化学习速率
   tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-4, 'Learning rate initial value')
   tf.app.flags.DEFINE_integer('DECAY_STEPS', 1000, 'DECAY_STEPS')
@@ -525,5 +525,6 @@ if __name__ == '__main__':
   # crnn = CRNN(n_class)
   # crnn.architecture(input_shape=[None, width, height, 1])
   # print('Build model done!')
+  # run_multiprocess('../../dataset/sequence_10k.tfrecord')
   run_multiprocess('../../dataset/sequence.tfrecord')
   print('Training done!')
