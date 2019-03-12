@@ -50,7 +50,7 @@ class CRNN():
     return tf.Variable(tf.truncated_normal(shape, mean=0., stddev=1.), name=name)
 
   def image2head(self, x):
-    for i in range(3):
+    for i in range(2):
       # print('Defind layer use kernel {} with name {}'.format('self.w%s0' % i, 'cnn0%s' % i))
       x = tf.nn.conv2d(x, eval('self.w%s0' % i), [1, 1, 1, 1],
                        padding='SAME', name='cnn0%s' % i)
@@ -511,7 +511,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer("batch_size",
                               64, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
-                            0.85, "Dropout keep probability")
+                            1.0, "Dropout keep probability")
   tf.app.flags.DEFINE_integer("evaluate_every",
                               100, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
