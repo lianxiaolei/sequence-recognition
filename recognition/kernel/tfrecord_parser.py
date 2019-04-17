@@ -2,8 +2,8 @@ import tensorflow as tf
 import os
 import cv2
 import numpy as np
-import skimage
 import random
+import matplotlib.pyplot as plt
 # from recognition.kernel.data_provider import *
 
 # characters = '0123456789+-*/=()'
@@ -103,7 +103,8 @@ def _bytes_feature_with_list(value):
   :return:
   """
   value = [str(v) for v in value]
-  return tf.train.Feature(bytes_list=tf.train.BytesList(value=[bytes(''.join(value), encoding='utf8')]))
+  return tf.train.Feature(
+    bytes_list=tf.train.BytesList(value=[bytes(''.join(value), encoding='utf8')]))
 
 
 def _write_features(features, tf_writer):
@@ -131,7 +132,7 @@ def tfrecord(path, batch_size=128):
       _write_features(features, tf_writer)
 
 
-def img2tfrecord(path, batch_size=128, data_path='../../dataset/nums'):
+def img2tfrecord(path, batch_size, data_path):
   """
   :param path
   :param batch_size:
@@ -146,6 +147,9 @@ def img2tfrecord(path, batch_size=128, data_path='../../dataset/nums'):
       features['label'] = _bytes_feature_with_list(y)
 
       _write_features(features, tf_writer)
+
+      if i % 1000 == 0:
+        print('Now process %s items.' % i)
 
 
 def _read_features(example_proto):
@@ -169,6 +173,7 @@ def _read_features(example_proto):
   img = tf.reshape(img, [width, height, 1])
 
   return img, y
+
 
 def sparse_tuple_from(sequences, dtype=np.int32):
   """
@@ -215,9 +220,16 @@ def tfrecord2img(path, epoch_batch_size=1):
     threads = tf.train.start_queue_runners(coord=coord)
     try:
       while not coord.should_stop():
-        img, l = sess.run(next_element)
+        img_tensor, l_tensor = next_element
+        img, l = sess.run([img_tensor, l_tensor])
+        print(img.shape)
+        print(type(l[1]), l)
+        print('-' * 80)
         y = list(map(lambda seq: seq.decode('utf8'), l))
-        y = [[int(num) for num in item] for item in y]
+        # y = [[int(num) for num in item] for item in y]
+        # plt.imshow(img[1, :, :, 0])
+        # plt.title(' '.join(y[1]))
+        # plt.show()
         y = sparse_tuple_from(y, dtype=np.int32)
     except tf.errors.OutOfRangeError:
       print('Done training -- epoch limit reached')
@@ -257,11 +269,12 @@ def to_img_test(path, epoch_batch_size=1):
 
 
 if __name__ == '__main__':
-  img2tfrecord('../../dataset/sequence_10k.tfrecord', batch_size=512 * 16, data_path='../../dataset/nums')
+  img2tfrecord('/Users/imperatore/data/numbers_280_28_1_1.tfrecord',
+               batch_size=128, data_path='/Users/imperatore/data/nums')
+
   # import time
   # tmp_time = time.time()
   # for i in range(4):
-  #   imgs, labels = tfrecord2img('../../dataset/sequence.tfrecord', epoch_batch_size=128)
-  #   print('Decode tfrecord to normal data with data shape:%s and label length:%s.' % (imgs.shape, len(labels)))
-  #
+  #   imgs, labels = tfrecord2img('/Users/imperatore/data/numbers_1.tfrecord', epoch_batch_size=128)
+  #   print('Decode tfrecord to normal data with data shape:%s and label length:%s.' % (imgs.shape, labels))
   # print('time cost:', time.time() - tmp_time)

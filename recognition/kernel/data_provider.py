@@ -4,22 +4,22 @@ import random
 import os
 import cv2
 import numpy as np
-import skimage
-from keras.preprocessing.image import ImageDataGenerator
+# from keras.preprocessing.image import ImageDataGenerator
 from recognition.kernel.sparse_parser import *
 import matplotlib.pyplot as plt
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len = 280, 28, 8
+width, height, n_len = 280, 48, 6
+# width, height, n_len = 256, 32, 6
 
-datagen = ImageDataGenerator(
-  rotation_range=0.4,
-  width_shift_range=0.04,
-  height_shift_range=0.04,
-  shear_range=0.2,
-  zoom_range=0.0,
-  fill_mode='nearest')
+# datagen = ImageDataGenerator(
+#   rotation_range=0.4,
+#   width_shift_range=0.04,
+#   height_shift_range=0.04,
+#   shear_range=0.2,
+#   zoom_range=0.0,
+#   fill_mode='nearest')
 
 
 def plot(img, title):
@@ -37,7 +37,7 @@ def generate():
   return random.choice(ts).format(*cs)
 
 
-def get_img_by_char(char, base_path='../../dataset/nums'):
+def get_img_by_char(char, base_path='/Users/imperatore/data/nums'):
   """
   get a img by giving char
   :param char:
@@ -71,6 +71,7 @@ def get_sequence_img(chars):
 
 def get_next_batch(batch_size=128, gene=1):
   X = np.zeros((batch_size, width, height, 1), dtype=np.uint8)
+  # X = np.zeros((batch_size, width, height), dtype=np.uint8)
   y = np.zeros((batch_size, n_len), dtype=np.uint8)
   for i in range(batch_size):
     random_str = ''.join([random.choice(characters) for j in range(n_len)])
@@ -78,6 +79,9 @@ def get_next_batch(batch_size=128, gene=1):
     tmp = np.array(get_sequence_img(random_str))
     tmp = tmp.reshape(tmp.shape[0], tmp.shape[1], 1)
     tmp = tmp.transpose(1, 0, 2)
+
+    # tmp = tmp.reshape(tmp.shape[0], tmp.shape[1])
+    # tmp = tmp.transpose(1, 0)
 
     X[i] = tmp
     y[i] = [characters.find(x) for x in random_str]
@@ -100,7 +104,9 @@ def get_next_batch(batch_size=128, gene=1):
   #     break
 
   sparse_target = sparse_tuple_from(y)
-  seq_len = np.ones(batch_size) * 10
+  # seq_len = np.ones(batch_size) * (n_len * 2 + 1)
+  seq_len = np.ones(batch_size) * (int(n_len * 1.5))
+  print('n_len:', int(n_len * 1.3))
 
   return X, sparse_target, seq_len
 
