@@ -74,13 +74,15 @@ class CRNN():
     Return: A variable.
     """
     if not zero:
-      return tf.Variable(tf.random_uniform(shape, 0., 1.), name=name)
+      # return tf.Variable(tf.random_uniform(shape, 0., 1.), name=name)
+      return tf.Variable(tf.random_normal(shape, 0., 1.), name=name)
     else:
-      return tf.Variable(tf.zeros(shape, dtype=tf.float32), name=name)
+      # return tf.Variable(tf.zeros(shape, dtype=tf.float32), name=name)
+      return tf.Variable(tf.random_normal(shape, 0., 1.), name=name)
 
   def image2head(self, x):
     with tf.name_scope('image2head'):
-      for i in range(4):
+      for i in range(3):
         # 2 convolution layers
         x = tf.nn.conv2d(x, eval('self.w%s0' % i), [1, 1, 1, 1],
                          padding='SAME', name='cnn0%s' % i)
@@ -168,7 +170,7 @@ class CRNN():
 
     """
     # 定义CNN kernels
-    kernel_shape = [3, 3, 1, 32]
+    kernel_shape = [3, 3, 1, 64]
     self.w00 = self._init_variable(kernel_shape, name='conv_w00')
     for i in range(5):
       for j in range(2):
@@ -187,9 +189,12 @@ class CRNN():
     # 构建图
     with self.graph.as_default():
 
-      config = tf.ConfigProto(
-        allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
-        log_device_placement=self.FLAGS.log_device_placement)
+      # config = tf.ConfigProto(
+      #   allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
+      #   log_device_placement=self.FLAGS.log_device_placement)
+      config = tf.ConfigProto(log_device_placement=self.FLAGS.log_device_placement)
+      config.gpu_options.per_process_gpu_memory_fraction = 0.0  # don't hog all vRAM
+      config.operation_timeout_in_ms = 50000  # terminate on long hangs
 
       self.sess = tf.Session(config=config)
       # self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
@@ -205,20 +210,21 @@ class CRNN():
         self.output = tf.math.log(self.output + 1e-7)
 
         self.loss = tf.nn.ctc_loss(labels=self.y, inputs=self.output,
-                                   sequence_length=self.seq_len)
+                                   sequence_length=self.seq_len,
+                                   preprocess_collapse_repeated=False, ctc_merge_repeated=True)
         self.cost = tf.reduce_mean(self.loss, name='reduce_mean')
 
       with tf.name_scope('step'):
         self.global_step = tf.Variable(0, name='global_step')
-        # self.learning_rate = tf.train.exponential_decay(self.FLAGS.INITIAL_LEARNING_RATE,
-        #                                                 self.global_step,
-        #                                                 self.FLAGS.DECAY_STEPS,
-        #                                                 self.FLAGS.LEARNING_RATE_DECAY_FACTOR,
-        #                                                 staircase=False)
+        self.learning_rate = tf.train.exponential_decay(self.FLAGS.INITIAL_LEARNING_RATE,
+                                                        self.global_step,
+                                                        self.FLAGS.DECAY_STEPS,
+                                                        self.FLAGS.LEARNING_RATE_DECAY_FACTOR,
+                                                        staircase=False)
         self.learning_rate = self.FLAGS.INITIAL_LEARNING_RATE
       with tf.name_scope('gradients'):
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate, name='adam_optimizer')
-        self.grads_and_vars = self.optimizer.compute_gradients(self.loss)
+        self.grads_and_vars = self.optimizer.compute_gradients(self.cost)
         self.train_op = self.optimizer.apply_gradients(self.grads_and_vars, self.global_step, name='finally_update')
 
       # ===至此,模型构建完成=========================================
@@ -475,7 +481,7 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
-                              32, "Batch Size (default: 64)")
+                              64, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
                             1., "Dropout keep probability")
   tf.app.flags.DEFINE_integer("evaluate_every",
@@ -483,10 +489,10 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   # 初始化学习速率
-  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-4, 'Learning rate initial value')
-  tf.app.flags.DEFINE_integer('DECAY_STEPS', 10000, 'DECAY_STEPS')
-  tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
-  tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.0, 'LEARNING_RATE_DECAY_FACTOR')
+  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
+  tf.app.flags.DEFINE_integer('DECAY_STEPS', 256, 'DECAY_STEPS')
+  # tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
+  tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.6, 'LEARNING_RATE_DECAY_FACTOR')
 
   crnn = CRNN(n_class, input_shape=[None, width, height, 1])
   crnn.architecture()

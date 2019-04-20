@@ -70,7 +70,7 @@ def gen(base_path):
   # img = img.transpose(1, 0, 2)
 
   tmp = np.array(get_sequence_img(random_str, base_path=base_path))
-  tmp = tmp.reshape(tmp.shape[0], tmp.shape[1], 1)
+  tmp = tmp.reshape([tmp.shape[0], tmp.shape[1], 1])
   tmp = tmp.transpose(1, 0, 2)
   img = tmp.astype(np.float64)
 
@@ -269,8 +269,8 @@ def to_img_test(path, epoch_batch_size=1):
 
 
 if __name__ == '__main__':
-  img2tfrecord('/Users/imperatore/data/numbers_280_28_1_1.tfrecord',
-               batch_size=128, data_path='/Users/imperatore/data/nums')
+  img2tfrecord(r'D:\data\cv\numbers_280_48_1_20k.tfrecord',
+               batch_size=1024 * 20, data_path=r'D:\data\cv\nums')
 
   # import time
   # tmp_time = time.time()

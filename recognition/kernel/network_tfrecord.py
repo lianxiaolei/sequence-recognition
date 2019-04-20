@@ -186,6 +186,8 @@ class CRNN():
     config = tf.ConfigProto(
       allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
       log_device_placement=self.FLAGS.log_device_placement)
+    # config.gpu_options.per_process_gpu_memory_fraction = 0.9
+    config.gpu_options.allow_growth = True
 
     self.sess = tf.Session(config=config)
     # self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
@@ -589,7 +591,7 @@ if __name__ == '__main__':
     print('Removed {} done.'.format(os.path.join(tmp_path, rmed)))
 
   tf.app.flags.DEFINE_boolean("allow_soft_placement",
-                              True, "Allow device soft device placement")
+                              False, "Allow device soft device placement")
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
@@ -609,5 +611,5 @@ if __name__ == '__main__':
   # crnn = CRNN(n_class)
   # crnn.architecture(input_shape=[None, width, height, 1])
   # print('Build model done!')
-  run_multiprocess('/Users/imperatore/data/numbers_280_28_1_1.tfrecord', check_value=False)
+  run_multiprocess(r'D:\data\cv\numbers_280_48_1_20k.tfrecord', check_value=False)
   print('Training done!')

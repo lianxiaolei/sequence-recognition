@@ -37,7 +37,7 @@ def generate():
   return random.choice(ts).format(*cs)
 
 
-def get_img_by_char(char, base_path='/Users/imperatore/data/nums'):
+def get_img_by_char(char, base_path=r'D:\data\cv\nums'):
   """
   get a img by giving char
   :param char:
@@ -105,8 +105,7 @@ def get_next_batch(batch_size=128, gene=1):
 
   sparse_target = sparse_tuple_from(y)
   # seq_len = np.ones(batch_size) * (n_len * 2 + 1)
-  seq_len = np.ones(batch_size) * (int(n_len * 1.5))
-  print('n_len:', int(n_len * 1.3))
+  seq_len = np.ones(batch_size) * int(17)
 
   return X, sparse_target, seq_len
 
