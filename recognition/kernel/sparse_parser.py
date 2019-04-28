@@ -51,7 +51,7 @@ def decode_sparse_tensor(sparse_tensor):
 def decode_a_seq(indexes, spars_tensor):
     decoded = []
     for m in indexes:
-        str = DIGITS[spars_tensor[1][m]]
+        str = int(DIGITS[spars_tensor[1][m]])
         decoded.append(str)
     return decoded
 

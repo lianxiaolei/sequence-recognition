@@ -7,18 +7,17 @@ from __future__ import print_function
 import tensorflow as tf
 import time
 import sys
-sys.path.append('/Users/imperatore/PycharmProjects/question-recognition/')
+
+sys.path.append(r'D:\PycharmProjects\sequence-recognition')
 from recognition.kernel.data_provider import *
 import shutil
 from tensorflow.python.keras.layers import *
 
 from tensorflow.python import debug as tf_debug
 
-DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_class = 280, 48, len(characters) + 1
-import datetime
+width, height, n_class = 256, 64, len(characters) + 1
 
 
 class CRNN():
@@ -43,7 +42,6 @@ class CRNN():
     self.graph = tf.Graph()
     with self.graph.as_default():
       with tf.name_scope(name='ph'):
-        # Read data with generator
         self.X = tf.placeholder(tf.float32, shape=input_shape, name='x')
         self.y = tf.sparse_placeholder(tf.int32, name='y')  # 不指定shape时，可以feed任意shape
         self.seq_len = tf.placeholder(tf.int32, [None], name='seq_len')
@@ -74,11 +72,9 @@ class CRNN():
     Return: A variable.
     """
     if not zero:
-      # return tf.Variable(tf.random_uniform(shape, 0., 1.), name=name)
-      return tf.Variable(tf.random_normal(shape, 0., 1.), name=name)
+      return tf.Variable(tf.random_normal(shape, 0., 0.1), name=name)
     else:
-      # return tf.Variable(tf.zeros(shape, dtype=tf.float32), name=name)
-      return tf.Variable(tf.random_normal(shape, 0., 1.), name=name)
+      return tf.Variable(tf.random_normal(shape, 0., 0.1), name=name)
 
   def image2head(self, x):
     with tf.name_scope('image2head'):
@@ -113,8 +109,7 @@ class CRNN():
       x = tf.reshape(x, shape=[-1, shape[1], shape[2] * shape[3]])
       self.w0 = self._init_variable(shape=[shape[2] * shape[3], self.rnn_units], name='w0')
       self.b0 = self._init_variable(shape=[self.rnn_units, ], name='b0', zero=True)
-      # x = tf.nn.xw_plus_b(x, self.w0, self.b0, name='dense0')
-      # x = tf.einsum('ijk,kl->ijl', x, self.w0, name='dense0')
+
       x = tf.tensordot(x, self.w0, axes=[[2], [0]], name='tensordot0')
       x = tf.add(x, self.b0)
 
@@ -122,34 +117,35 @@ class CRNN():
       x = tf.nn.relu(x)
 
       # 构建双向GRU
-      gru0 = GRU(self.rnn_units, activation='tanh',
-                 return_sequences=True, kernel_initializer='he_uniform',
-                 name='gru0')(x)
+      x = GRU(self.rnn_units, activation='tanh',
+              return_sequences=True, kernel_initializer='he_normal',
+              name='gru0')(x)
 
-      gru0b = GRU(self.rnn_units, activation='tanh',
-                  return_sequences=True, kernel_initializer='he_uniform',
-                  name='gru0b', go_backwards=True)(x)
+      # Back step RNN using.
+      # gru0b = GRU(self.rnn_units, activation='tanh',
+      #             return_sequences=True, kernel_initializer='he_normal',
+      #             name='gru0b', go_backwards=True)(x)
 
-      x = tf.concat([gru0, gru0b], axis=-1, name='tanh')
+      # x = tf.concat([gru0, gru0b], axis=-1, name='tanh')
       # x = tf.add(gru0, gru0b, name='concat')
 
-      gru1 = GRU(self.rnn_units, activation='tanh',
-                 return_sequences=True, kernel_initializer='he_uniform',
-                 name='gru1')(x)
+      x = GRU(self.rnn_units, activation='tanh',
+              return_sequences=True, kernel_initializer='he_normal',
+              name='gru1')(x)
 
-      gru1b = GRU(self.rnn_units, activation='tanh',
-                  return_sequences=True, kernel_initializer='he_uniform',
-                  name='gru1b', go_backwards=True)(x)
+      # Back step RNN using.
+      # gru1b = GRU(self.rnn_units, activation='tanh',
+      #             return_sequences=True, kernel_initializer='he_normal',
+      #             name='gru1b', go_backwards=True)(x)
 
-      x = tf.add(gru1, gru1b, name='add')
+      # x = tf.add(gru1, gru1b, name='add')
 
       x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout_tail')
 
       # self.w1 = self._init_variable(shape=[self.rnn_units * 2, self.num_class], name='w1')
       self.w1 = self._init_variable(shape=[self.rnn_units, self.num_class], name='w1')
       self.b1 = self._init_variable(shape=[self.num_class, ], name='b1', zero=True)
-      # x = tf.nn.xw_plus_b(x, self.w1, self.b1, name='dense1')
-      # x = tf.einsum('ijk,kl->ijl', x, self.w1)
+
       x = tf.tensordot(x, self.w1, axes=[[2], [0]], name='tesnordot1')
       x = tf.add(x, self.b1)
       x = tf.nn.softmax(x, name='bottom_softmax')
@@ -170,7 +166,7 @@ class CRNN():
 
     """
     # 定义CNN kernels
-    kernel_shape = [3, 3, 1, 64]
+    kernel_shape = [3, 3, 1, 32]
     self.w00 = self._init_variable(kernel_shape, name='conv_w00')
     for i in range(5):
       for j in range(2):
@@ -181,22 +177,22 @@ class CRNN():
         self.__dict__['w%s%s' % (i, j)] = self._init_variable(kernel_shape, name='conv_w%s%s' % (i, j))
         print('w%s%s' % (i, j), eval('self.w%s%s.shape' % (i, j)))
 
+    # Image to feature map.
     self.head = self.image2head(self.X)
-    # self.head = self.X
+
+    # Feature map to Vector.
     self.output = self.head2tail(self.head)  # self.output == self.tail
 
   def architecture(self, mode='train'):
     # 构建图
     with self.graph.as_default():
-
-      # config = tf.ConfigProto(
-      #   allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
-      #   log_device_placement=self.FLAGS.log_device_placement)
-      config = tf.ConfigProto(log_device_placement=self.FLAGS.log_device_placement)
-      config.gpu_options.per_process_gpu_memory_fraction = 0.0  # don't hog all vRAM
-      config.operation_timeout_in_ms = 50000  # terminate on long hangs
+      config = tf.ConfigProto(
+        allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
+        log_device_placement=self.FLAGS.log_device_placement)
+      # config.gpu_options.per_process_gpu_memory_fraction = 0.7  # don't hog all vRAM
 
       self.sess = tf.Session(config=config)
+      # Using TFDebug mode.
       # self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
 
       self._build_network(mode=mode)
@@ -204,9 +200,6 @@ class CRNN():
       with tf.name_scope('loss'):
         # 计算误差
         #  time_major默认为True
-        print('output shape:', self.output.shape)
-        print('label  shape:', self.y.dense_shape)
-        print('seqlen shape:', self.seq_len.shape)
         self.output = tf.math.log(self.output + 1e-7)
 
         self.loss = tf.nn.ctc_loss(labels=self.y, inputs=self.output,
@@ -221,7 +214,7 @@ class CRNN():
                                                         self.FLAGS.DECAY_STEPS,
                                                         self.FLAGS.LEARNING_RATE_DECAY_FACTOR,
                                                         staircase=False)
-        self.learning_rate = self.FLAGS.INITIAL_LEARNING_RATE
+        # self.learning_rate = self.FLAGS.INITIAL_LEARNING_RATE
       with tf.name_scope('gradients'):
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate, name='adam_optimizer')
         self.grads_and_vars = self.optimizer.compute_gradients(self.cost)
@@ -237,59 +230,34 @@ class CRNN():
         # greedy decoder
         # self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(self.output, self.seq_len)
 
-        concat_indices = None
-        concat_values = None
-        # accelerate_indices = 0
-
-        for i in range(len(self.decoded)):
-          decoded = self.decoded[i]
-          if i == 0:
-            concat_indices = decoded.indices
-            concat_values = decoded.values
-          # else:
-          #   print('拼接一把')
-          #   decoded_indices = tf.concat([tf.expand_dims(decoded.indices[:, 0] + accelerate_indices, axis=-1),
-          #                                tf.expand_dims(decoded.indices[:, 1], axis=-1)], axis=1)
-          #   concat_indices = tf.concat([concat_indices, decoded_indices], axis=0)
-          #   concat_values = tf.concat([concat_values, decoded.values], axis=0)
-          # accelerate_indices += decoded.shape[0]
+        decoded = self.decoded[0]
+        concat_indices = decoded.indices
+        concat_values = decoded.values
 
         first_dim = self.FLAGS.batch_size
         second_dim = tf.reduce_max(self.seq_len)
 
         concat_values = tf.cast(concat_values, tf.int32)
 
-        print('Informations  \noutput:{}\ndecoded:{},\nseq_len:{},'
-              '\nconcat_indices:{},\nconcat_values:{}'
-              .format(self.output, self.decoded, self.seq_len, concat_indices, concat_values))
-        print('first dimension:{},\nsecond dimension:{}'.format(first_dim, second_dim))
-
-        decoded_tensor = tf.SparseTensor(indices=concat_indices, values=concat_values,
-                                         dense_shape=[first_dim, second_dim])
+        self.decoded_tensor = tf.SparseTensor(indices=concat_indices, values=concat_values,
+                                              dense_shape=[first_dim, second_dim])
 
         # 使用编辑距离计算准确率
-        edit_distance = tf.edit_distance(decoded_tensor, self.y, name='edit_distance', normalize=True)
-        self.acc_op = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_mean(edit_distance), name='subtract')
+        self.edit_distance = tf.edit_distance(self.decoded_tensor, self.y, name='edit_distance', normalize=True)
+        self.acc_op = tf.subtract(tf.constant(1, dtype=tf.float32), tf.reduce_mean(self.edit_distance), name='subtract')
 
       # 开始记录信息
       self.summary()
 
       self.sess.run(tf.global_variables_initializer())
 
-      # with self.sess.as_default():
-      # [print(n.name) for n in tf.get_default_graph().as_graph_def().node]
-
   def calc_accuracy(self, decode_list, test_target):
     original_list = decode_sparse_tensor(test_target)
     detected_list = decode_sparse_tensor(decode_list)
-    # detected_list = self.sess.run(tf.sparse_to_dense(decode_list))
-    true_numer = 0
 
-    if len(original_list) != len(detected_list):
-      print("len(original_list)", len(original_list), "len(detected_list)", len(detected_list),
-            " test and detect length desn't match")
-      return
+    true_numer = 0
     print("T/F: original(length) <-------> detected(length)")
+    print('Twice sequences length', len(original_list), len(detected_list))
     for idx, number in enumerate(original_list):
       detect_number = detected_list[idx]
       hit = (number == detect_number)
@@ -299,15 +267,14 @@ class CRNN():
     print("Test Accuracy:", true_numer * 1.0 / len(original_list))
 
   def _accuracy(self, test_inputs, test_targets, test_seq_len):
-    # test_inputs, test_targets, test_seq_len = get_next_batch(self.FLAGS.batch_size)
-    # test_inputs, test_targets, test_seq_len = get_next_batch(1)
-    print('test sequence length:', test_seq_len)
-    decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
-                                                      test_seq_len,
-                                                      merge_repeated=False)
+    # Beam search decoder
+    # decoded, log_prob = tf.nn.ctc_beam_search_decoder(self.output,
+    #                                                   test_seq_len,
+    #                                                   merge_repeated=False)
 
-    # decoded, log_prob = tf.nn.ctc_greedy_decoder(self.output,
-    #                                              test_seq_len)
+    # Greedy decoder
+    decoded, log_prob = tf.nn.ctc_greedy_decoder(self.output,
+                                                 test_seq_len)
 
     test_feed = {self.keep_prob: 1.,
                  self.X: test_inputs,
@@ -401,18 +368,9 @@ class CRNN():
       feed_dict=feed_dict
     )
 
-    # output, yy = self.sess.run([self.output, self.y], feed_dict=feed_dict)
-    # time_str = datetime.datetime.now().isoformat()
-    # print("{}:step{},loss:{},acc:{},decoded:{}".format(time_str, step, loss, accuracy, self.decoded[0]))
-    # if self.interval_loss > loss:
-    #   self.interval_loss = loss
-    #   self.sess.run(tf.assign(self.global_step, tf.add(self.global_step, 1)))
-    #   print("step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
-    print("step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
+    print("Training step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
 
     self.train_summary_writer.add_summary(summaries, step)
-    if step % self.FLAGS.batch_size == 0:
-      print('epoch:{}'.format(step // self.FLAGS.batch_size))
 
   def dev_step(self, inputs, sparse_targets, seq_len):
     """
@@ -440,26 +398,16 @@ class CRNN():
     )
 
   def run(self):
-    # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
     for epoch in range(102400):
-      # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-      for step in range(32):
+      inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      self.train_step(inputs, sparse_targets, seq_len)
+      current_step = tf.train.global_step(self.sess, self.global_step)
+      if current_step % self.FLAGS.evaluate_every == 0:
+        print("\nAfter epoch %s Evaluation:" % epoch)
         inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-        # plot(inputs[0], str(step))
-        self.train_step(inputs, sparse_targets, seq_len)
-        current_step = tf.train.global_step(self.sess, self.global_step)
-        if current_step % self.FLAGS.evaluate_every == 0:
-          print("\nAfter epoch %s Evaluation:" % epoch)
-          # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-          self.dev_step(inputs, sparse_targets, seq_len)
-          print('Evaluation Done\n')
-          self._accuracy(inputs, sparse_targets, seq_len)
-      # return
-      # print("\nAfter epoch %s Evaluation:" % epoch)
-      # # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-      # self.dev_step(inputs, sparse_targets, seq_len)
-      # print('Evaluation Done\n')
-      # self._accuracy()
+        self.dev_step(inputs, sparse_targets, seq_len)
+        print('Evaluation Done:\n')
+        self._accuracy(inputs, sparse_targets, seq_len)
 
 
 if __name__ == '__main__':
@@ -483,16 +431,16 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_integer("batch_size",
                               64, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
-                            1., "Dropout keep probability")
+                            0.8, "Dropout keep probability")
   tf.app.flags.DEFINE_integer("evaluate_every",
-                              100, "Evaluate model on dev set after this many steps (default: 100)")
+                              10, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   # 初始化学习速率
   tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
   tf.app.flags.DEFINE_integer('DECAY_STEPS', 256, 'DECAY_STEPS')
   # tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
-  tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.6, 'LEARNING_RATE_DECAY_FACTOR')
+  tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.8, 'LEARNING_RATE_DECAY_FACTOR')
 
   crnn = CRNN(n_class, input_shape=[None, width, height, 1])
   crnn.architecture()

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len = 280, 48, 6
+width, height, n_len = 256, 64, 6
 # width, height, n_len = 256, 32, 6
 
 # datagen = ImageDataGenerator(
@@ -105,9 +105,9 @@ def get_next_batch(batch_size=128, gene=1):
 
   sparse_target = sparse_tuple_from(y)
   # seq_len = np.ones(batch_size) * (n_len * 2 + 1)
-  seq_len = np.ones(batch_size) * int(17)
+  seq_len = np.ones(batch_size) * int(width / 8)
 
-  return X, sparse_target, seq_len
+  return X / 255., sparse_target, seq_len
 
 
 if __name__ == '__main__':

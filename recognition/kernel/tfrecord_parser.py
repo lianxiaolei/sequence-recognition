@@ -3,21 +3,13 @@ import os
 import cv2
 import numpy as np
 import random
+from tqdm import tqdm_notebook, trange, tnrange, tqdm
 import matplotlib.pyplot as plt
 # from recognition.kernel.data_provider import *
 
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 280, 28, 10, len(characters) + 1
-
-
-def generate():
-  ds = '0123456789'
-  ts = ['{}{}{}{}{}', '({}{}{}){}{}', '{}{}({}{}{})']
-  os = '+-*/'
-  # os = ['+', '-', 'times', 'div']
-  cs = [random.choice(ds) if x % 2 == 0 else random.choice(os) for x in range(5)]
-  return random.choice(ts).format(*cs)
+width, height, n_len, n_class = 256, 64, 6, len(characters) + 1
 
 
 def get_img_by_char(char, base_path):
@@ -40,7 +32,7 @@ def get_img_by_char(char, base_path):
 
   file = files[rdm]
   path = os.path.join(path, file)
-  return cv2.imread(path, cv2.IMREAD_GRAYSCALE) / 255
+  return cv2.imread(path, cv2.IMREAD_GRAYSCALE)
 
 
 def get_sequence_img(chars, base_path):
@@ -62,17 +54,13 @@ def gen(base_path):
 
   :return:
   """
-  random_str = ''.join([random.choice(characters) for j in range(n_len)])
-
-  # img = np.array(get_sequence_img(random_str, base_path=base_path))
-  # convert img to uint8
-  # img = img.astype(np.uint8)
-  # img = img.transpose(1, 0, 2)
+  random_str_list = [random.choice(characters) for j in range(n_len)]
+  random_str = ''.join(random_str_list)
+  # random_str = ' '.join([random.choice(characters) for j in range(n_len)])
 
   tmp = np.array(get_sequence_img(random_str, base_path=base_path))
   tmp = tmp.reshape([tmp.shape[0], tmp.shape[1], 1])
-  tmp = tmp.transpose(1, 0, 2)
-  img = tmp.astype(np.float64)
+  img = tmp.transpose(1, 0, 2)
 
   return img, [characters.find(x) for x in random_str]
 
@@ -139,7 +127,7 @@ def img2tfrecord(path, batch_size, data_path):
   :return:
   """
   with tf.python_io.TFRecordWriter(path=path) as tf_writer:
-    for i in range(batch_size):
+    for i in trange(batch_size, ncols=100):
       features = {}
       img, y = gen(data_path)
 
@@ -168,8 +156,7 @@ def _read_features(example_proto):
   # img = parse_example['image']
   y = parse_example['label']
 
-  img = tf.decode_raw(parse_example['image'], out_type=tf.float64)
-  img = tf.cast(img, tf.float32)
+  img = tf.decode_raw(parse_example['image'], out_type=tf.float32)
   img = tf.reshape(img, [width, height, 1])
 
   return img, y
@@ -269,8 +256,8 @@ def to_img_test(path, epoch_batch_size=1):
 
 
 if __name__ == '__main__':
-  img2tfrecord(r'D:\data\cv\numbers_280_48_1_20k.tfrecord',
-               batch_size=1024 * 20, data_path=r'D:\data\cv\nums')
+  img2tfrecord(r'D:\data\cv\numbers_256_64_1_1k.tfrecord',
+               batch_size=1024 * 1, data_path=r'D:\data\cv\nums')
 
   # import time
   # tmp_time = time.time()

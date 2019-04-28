@@ -5,17 +5,20 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.contrib import rnn
-import datetime
 import time
+import sys
+
+sys.path.append(r'D:\PycharmProjects\sequence-recognition')
 from recognition.kernel.data_provider import *
 import shutil
+from tensorflow.python.keras.layers import *
+
 from tensorflow.python import debug as tf_debug
 
-DIGITS = '0123456789'
 # characters = '0123456789+-*/=()'
 characters = '0123456789'
-width, height, n_len, n_class = 280, 28, 10, len(characters) + 1
+width, height, n_class = 256, 64, len(characters) + 1
+from recognition.kernel.data_provider import *
 
 
 class CRNN():
@@ -49,7 +52,7 @@ class CRNN():
       # self.seq_len = tf.placeholder(tf.int32, [None], name='seq_len')
       # self.keep_prob = tf.placeholder(tf.float32, name='kp')
 
-  def _init_variable(self, shape, name=None):
+  def _init_variable(self, shape, name=None, zero=None):
     """
     Create and initialize tensorflow variable.
     Args:
@@ -57,7 +60,10 @@ class CRNN():
         name: A string. The name in tensorflow graph of the initiated variable.
     Return: A variable.
     """
-    return tf.Variable(tf.truncated_normal(shape, mean=0., stddev=1.), name=name)
+    if not zero:
+      return tf.Variable(tf.random_normal(shape, 0., 0.1), name=name)
+    else:
+      return tf.Variable(tf.random_normal(shape, 0., 0.1), name=name)
 
   def image2head(self, x):
     for i in range(3):
@@ -89,44 +95,48 @@ class CRNN():
     self.rnn_units = self.FLAGS.rnn_units
     shape = x.get_shape().as_list()
     x = tf.reshape(x, shape=[-1, shape[1], shape[2] * shape[3]])
-    self.w0 = self._init_variable(shape=[self.batch_size, shape[2] * shape[3], self.rnn_units], name='w0')
-    self.b0 = self._init_variable(shape=[self.rnn_units, ], name='b0')
-    x = tf.nn.xw_plus_b(x, self.w0, self.b0, name='dense0')
+
+    self.w0 = self._init_variable(shape=[shape[2] * shape[3], self.rnn_units], name='w0')
+    self.b0 = self._init_variable(shape=[self.rnn_units, ], name='b0', zero=True)
+
+    x = tf.tensordot(x, self.w0, axes=[[2], [0]], name='tensordot0')
+    x = tf.add(x, self.b0)
+
     x = tf.layers.batch_normalization(x, name='bn2')
     x = tf.nn.relu(x)
 
-    # 构建双向RNN
-    cell = rnn.GRUCell(self.rnn_units, name='frnn', reuse=tf.AUTO_REUSE,
-                       kernel_initializer=tf.truncated_normal_initializer(stddev=1.),
-                       activation=tf.nn.tanh)
-    back_cell = rnn.GRUCell(self.rnn_units, name='brnn', reuse=tf.AUTO_REUSE,
-                            kernel_initializer=tf.truncated_normal_initializer(stddev=1.),
-                            activation=tf.nn.tanh)
+    # 构建双向GRU
+    x = GRU(self.rnn_units, activation='tanh',
+            return_sequences=True, kernel_initializer='he_normal',
+            name='gru0')(x)
 
-    x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
-                                           dtype=tf.float32, time_major=False)
+    # Back step RNN using.
+    # gru0b = GRU(self.rnn_units, activation='tanh',
+    #             return_sequences=True, kernel_initializer='he_normal',
+    #             name='gru0b', go_backwards=True)(x)
 
-    x = tf.add(x[0], x[1], name='add')
+    # x = tf.concat([gru0, gru0b], axis=-1, name='tanh')
+    # x = tf.add(gru0, gru0b, name='concat')
 
-    cell = rnn.GRUCell(self.rnn_units, name='frnn1', reuse=tf.AUTO_REUSE,
-                       kernel_initializer=tf.truncated_normal_initializer(stddev=1.),
-                       activation=tf.nn.tanh)
-    back_cell = rnn.GRUCell(self.rnn_units, name='brnn1', reuse=tf.AUTO_REUSE,
-                            kernel_initializer=tf.truncated_normal_initializer(stddev=1.),
-                            activation=tf.nn.tanh)
+    x = GRU(self.rnn_units, activation='tanh',
+            return_sequences=True, kernel_initializer='he_normal',
+            name='gru1')(x)
 
-    # 构建双向拼接RNN
-    x, _ = tf.nn.bidirectional_dynamic_rnn(cell, back_cell, x, self.seq_len,
-                                           # initial_state_fw,
-                                           # initial_state_bw,
-                                           dtype=tf.float32, time_major=False)
+    # Back step RNN using.
+    # gru1b = GRU(self.rnn_units, activation='tanh',
+    #             return_sequences=True, kernel_initializer='he_normal',
+    #             name='gru1b', go_backwards=True)(x)
 
-    x = tf.concat([x[0], x[1]], axis=-1, name='concat')
+    # x = tf.add(gru1, gru1b, name='add')
+
     x = tf.nn.dropout(x, keep_prob=self.keep_prob, name='dropout_tail')
 
-    self.w1 = self._init_variable(shape=[self.batch_size, self.rnn_units * 2, self.num_class], name='w1')
-    self.b1 = self._init_variable(shape=[self.num_class, ], name='b1')
-    x = tf.nn.xw_plus_b(x, self.w1, self.b1, name='dense1')
+    # self.w1 = self._init_variable(shape=[self.rnn_units * 2, self.num_class], name='w1')
+    self.w1 = self._init_variable(shape=[self.rnn_units, self.num_class], name='w1')
+    self.b1 = self._init_variable(shape=[self.num_class, ], name='b1', zero=True)
+
+    x = tf.tensordot(x, self.w1, axes=[[2], [0]], name='tesnordot1')
+    x = tf.add(x, self.b1)
     x = tf.nn.softmax(x, name='bottom_softmax')
 
     # time major 模式需要的input shape:(max_time x batch_size x num_classes)
@@ -475,8 +485,9 @@ def run_multiprocess(path, check_value=False):
     # img = parse_example['image']
     y = parse_example['label']
 
-    img = tf.decode_raw(parse_example['image'], out_type=tf.float64)
+    img = tf.decode_raw(parse_example['image'], out_type=tf.uint8)
     img = tf.cast(img, tf.float32)
+    img = img / 255.
     img = tf.reshape(img, [width, height, 1])
     return img, y
 
@@ -553,10 +564,10 @@ def run_multiprocess(path, check_value=False):
           current_step = tf.train.global_step(crnn.sess, crnn.global_step)
           if current_step % crnn.FLAGS.evaluate_every == 0:
             print("\nAfter epoch %s Evaluation:" % i)
-            # inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-            # crnn.dev_step(inputs, sparse_targets, seq_len)
+            inputs, sparse_targets, seq_len = get_next_batch(64)
+            crnn.dev_step(inputs, sparse_targets, seq_len)
             print('Evaluation Done\n')
-            # crnn._accuracy(inputs, sparse_targets, seq_len)
+            crnn._accuracy(inputs, sparse_targets, seq_len)
 
       # for epoch in range(128):
       #   for step in range(32):
@@ -595,21 +606,21 @@ if __name__ == '__main__':
   tf.app.flags.DEFINE_boolean("log_device_placement",
                               False, "Log placement of ops on devices")
   tf.app.flags.DEFINE_integer("batch_size",
-                              128, "Batch Size (default: 64)")
+                              64, "Batch Size (default: 64)")
   tf.app.flags.DEFINE_float("dropout_keep_prob",
-                            1.0, "Dropout keep probability")
+                            0.8, "Dropout keep probability")
   tf.app.flags.DEFINE_integer("evaluate_every",
                               100, "Evaluate model on dev set after this many steps (default: 100)")
   tf.app.flags.DEFINE_integer('rnn_units',
                               128, "Rnn Units")
   # 初始化学习速率
-  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-4, 'Learning rate initial value')
-  tf.app.flags.DEFINE_integer('DECAY_STEPS', 10000, 'DECAY_STEPS')
+  tf.app.flags.DEFINE_float('INITIAL_LEARNING_RATE', 1e-3, 'Learning rate initial value')
+  tf.app.flags.DEFINE_integer('DECAY_STEPS', 256, 'DECAY_STEPS')
   tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
-  tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.0, 'LEARNING_RATE_DECAY_FACTOR')
+  tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.8, 'LEARNING_RATE_DECAY_FACTOR')
 
   # crnn = CRNN(n_class)
   # crnn.architecture(input_shape=[None, width, height, 1])
   # print('Build model done!')
-  run_multiprocess(r'D:\data\cv\numbers_280_48_1_20k.tfrecord', check_value=False)
+  run_multiprocess(r'D:\data\cv\numbers_256_64_1_300k.tfrecord', check_value=False)
   print('Training done!')
