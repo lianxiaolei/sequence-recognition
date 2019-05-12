@@ -12,7 +12,7 @@ sys.path.append('/home/lian/PycharmProjects/sequence-recognition')
 from recognition.kernel.data_provider import *
 import shutil
 from tensorflow.python.keras.layers import *
-
+from tqdm import tqdm, trange
 from tensorflow.python import debug as tf_debug
 
 # characters = '0123456789+-*/=()'
@@ -368,9 +368,8 @@ class CRNN():
       feed_dict=feed_dict
     )
 
-    print("Training step:{}\tloss:{}\tacc:{}".format(step, loss, accuracy))
-
     self.train_summary_writer.add_summary(summaries, step)
+    return step, loss, accuracy
 
   def dev_step(self, inputs, sparse_targets, seq_len):
     """
@@ -398,16 +397,19 @@ class CRNN():
     )
 
   def run(self):
-    for epoch in range(102400):
-      inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-      self.train_step(inputs, sparse_targets, seq_len)
-      current_step = tf.train.global_step(self.sess, self.global_step)
-      if current_step % self.FLAGS.evaluate_every == 0:
-        print("\nAfter epoch %s Evaluation:" % epoch)
+    for epoch in range(1024):
+      bar = tqdm(range(128))
+      for step in bar:
         inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
-        self.dev_step(inputs, sparse_targets, seq_len)
-        print('Evaluation Done:\n')
-        self._accuracy(inputs, sparse_targets, seq_len)
+        s, l, a = self.train_step(inputs, sparse_targets, seq_len)
+        bar.set_description_str("Training step:{}\tloss:{}\tacc:{}".format(s, l, a))
+        # current_step = tf.train.global_step(self.sess, self.global_step)
+        # if current_step % self.FLAGS.evaluate_every == 0:
+      print("\nAfter epoch %s Evaluation:" % epoch)
+      inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      self.dev_step(inputs, sparse_targets, seq_len)
+      print('Evaluation Done:\n')
+      self._accuracy(inputs, sparse_targets, seq_len)
 
 
 if __name__ == '__main__':

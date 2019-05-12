@@ -37,7 +37,7 @@ def generate():
   return random.choice(ts).format(*cs)
 
 
-def get_img_by_char(char, base_path=r'/home/lian/Documents/data/cv/nums'):
+def get_img_by_char(char, base_path='/home/lian/Documents/data/cv/nums'):
   """
   get a img by giving char
   :param char:
