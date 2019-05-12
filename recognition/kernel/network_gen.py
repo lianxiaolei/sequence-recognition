@@ -8,7 +8,7 @@ import tensorflow as tf
 import time
 import sys
 
-sys.path.append(r'D:\PycharmProjects\sequence-recognition')
+sys.path.append('/home/lian/PycharmProjects/sequence-recognition')
 from recognition.kernel.data_provider import *
 import shutil
 from tensorflow.python.keras.layers import *
@@ -189,7 +189,7 @@ class CRNN():
       config = tf.ConfigProto(
         allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
         log_device_placement=self.FLAGS.log_device_placement)
-      # config.gpu_options.per_process_gpu_memory_fraction = 0.7  # don't hog all vRAM
+      config.gpu_options.per_process_gpu_memory_fraction = 0.7  # don't hog all vRAM
 
       self.sess = tf.Session(config=config)
       # Using TFDebug mode.
@@ -412,17 +412,20 @@ class CRNN():
 
 if __name__ == '__main__':
   tmp_path = '../../run_temp/'
-  rmeds = os.listdir(tmp_path)
-  for rmed in rmeds:
-    joint = os.path.join(tmp_path, rmed)
-    try:
-      os.rmdir(joint)
-    except Exception as e:
+  try:
+    rmeds = os.listdir(tmp_path)
+    for rmed in rmeds:
+      joint = os.path.join(tmp_path, rmed)
       try:
-        os.remove(joint)
+        os.rmdir(joint)
       except Exception as e:
-        shutil.rmtree(joint)
-    print('Removed {} done.'.format(os.path.join(tmp_path, rmed)))
+        try:
+          os.remove(joint)
+        except Exception as e:
+          shutil.rmtree(joint)
+      print('Removed {} done.'.format(os.path.join(tmp_path, rmed)))
+  except Exception as e:
+    pass
 
   tf.app.flags.DEFINE_boolean("allow_soft_placement",
                               True, "Allow device soft device placement")
