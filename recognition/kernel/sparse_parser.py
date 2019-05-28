@@ -2,7 +2,9 @@
 
 import numpy as np
 
-DIGITS = '0123456789'
+# DIGITS = '0123456789'
+characters = '0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19_20'
+char_list = characters.split('_')
 
 
 # 转化一个序列列表为稀疏矩阵
@@ -51,7 +53,8 @@ def decode_sparse_tensor(sparse_tensor):
 def decode_a_seq(indexes, spars_tensor):
     decoded = []
     for m in indexes:
-        str = int(DIGITS[spars_tensor[1][m]])
+        # str = int(DIGITS[spars_tensor[1][m]])
+        str = int(char_list[spars_tensor[1][m]])
         decoded.append(str)
     return decoded
 

@@ -16,16 +16,16 @@ from tqdm import tqdm, trange
 from tensorflow.python import debug as tf_debug
 
 # characters = '0123456789+-*/=()'
-characters = '0123456789'
-width, height, n_class = 256, 64, len(characters) + 1
-
+# characters = '0123456789'
+# width, height, n_class = 256, 64, len(characters) + 1
+n_class = 22
 
 class CRNN():
   """
 
   """
 
-  def __init__(self, num_class, input_shape):
+  def __init__(self, num_class, input_shape, save_when_acc_gt=0.8, model_output_path='./'):
     """
     Initialize features, labels, configurations, batch_size, num_class and keep probability.
     Args:
@@ -39,6 +39,8 @@ class CRNN():
     self.FLAGS = tf.flags.FLAGS
     self.batch_size = self.FLAGS.batch_size
     self.input_shape = input_shape
+    self.save_when_acc_gt = save_when_acc_gt
+    self.model_output_path = model_output_path
     self.graph = tf.Graph()
     with self.graph.as_default():
       with tf.name_scope(name='ph'):
@@ -186,11 +188,14 @@ class CRNN():
   def architecture(self, mode='train'):
     # 构建图
     with self.graph.as_default():
-      config = tf.ConfigProto(
-        allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
-        log_device_placement=self.FLAGS.log_device_placement)
-      config.gpu_options.per_process_gpu_memory_fraction = 0.7  # don't hog all vRAM
+      # config = tf.ConfigProto(
+      #   allow_soft_placement=self.FLAGS.allow_soft_placement,  # 设置让程序自动选择设备运行
+      #   log_device_placement=self.FLAGS.log_device_placement)
+      # config.gpu_options.per_process_gpu_memory_fraction = 0.7  # don't hog all vRAM
 
+      config = tf.ConfigProto(allow_soft_placement=True)
+      config.gpu_options.allocator_type = 'BFC'
+      config.gpu_options.per_process_gpu_memory_fraction = 0.90
       self.sess = tf.Session(config=config)
       # Using TFDebug mode.
       # self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
@@ -252,9 +257,20 @@ class CRNN():
       self.sess.run(tf.global_variables_initializer())
 
   def calc_accuracy(self, decode_list, test_target):
+    """
+
+    Args:
+      decode_list:
+      test_target:
+
+    Returns:
+
+    """
     original_list = decode_sparse_tensor(test_target)
     detected_list = decode_sparse_tensor(decode_list)
-
+    if not len(original_list) == len(detected_list):
+      print("The prediction sequence length is not match the origin sequence length.")
+      return
     true_numer = 0
     print("T/F: original(length) <-------> detected(length)")
     print('Twice sequences length', len(original_list), len(detected_list))
@@ -264,7 +280,10 @@ class CRNN():
       print(hit, number, "(", len(number), ") <-------> ", detect_number, "(", len(detect_number), ")")
       if hit:
         true_numer = true_numer + 1
-    print("Test Accuracy:", true_numer * 1.0 / len(original_list))
+    acc = true_numer * 1.0 / len(original_list)
+    print("Test Accuracy:", acc)
+    if acc >= self.save_when_acc_gt:
+      self.checkpoint(self.model_output_path)
 
   def _accuracy(self, test_inputs, test_targets, test_seq_len):
     # Beam search decoder
@@ -332,9 +351,10 @@ class CRNN():
 
     if not os.path.exists(checkpoint_dir):
       os.mkdir(checkpoint_dir)
-    self.saver = tf.train.Saver(tf.all_variables())
-    path = self.saver.save(self.sess, self.checkpoint_prefix, global_step=self.global_step)
-    print("Saved model checkpoint to {}\n".format(path))
+    with self.graph.as_default():
+      self.saver = tf.train.Saver(tf.all_variables())
+      path = self.saver.save(self.sess, self.checkpoint_prefix, global_step=self.global_step)
+      print("Saved model checkpoint to {}\n".format(path))
 
   def train_step(self, inputs, sparse_targets, seq_len, check_value=False):
     """
@@ -396,17 +416,19 @@ class CRNN():
       feed_dict=feed_dict
     )
 
-  def run(self):
-    for epoch in range(1024):
-      bar = tqdm(range(128))
+  def run(self, epoch, step):
+    for epoch in range(epoch):
+      bar = tqdm(range(step), ncols=100)
       for step in bar:
-        inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+        inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size,
+                                                         base_path='/home/lian/data/cv/hand-written-math-symbol/images_rb')
         s, l, a = self.train_step(inputs, sparse_targets, seq_len)
-        bar.set_description_str("Training step:{}\tloss:{}\tacc:{}".format(s, l, a))
+        bar.set_description_str("Training step:{}\tloss:{}\tacc:{}".format(s, str(l)[:10], str(a)[:10]))
         # current_step = tf.train.global_step(self.sess, self.global_step)
         # if current_step % self.FLAGS.evaluate_every == 0:
       print("\nAfter epoch %s Evaluation:" % epoch)
-      inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size)
+      inputs, sparse_targets, seq_len = get_next_batch(self.FLAGS.batch_size,
+                                                       base_path='/home/lian/data/cv/hand-written-math-symbol/images_rb')
       self.dev_step(inputs, sparse_targets, seq_len)
       print('Evaluation Done:\n')
       self._accuracy(inputs, sparse_targets, seq_len)
@@ -447,8 +469,9 @@ if __name__ == '__main__':
   # tf.app.flags.DEFINE_integer('REPORT_STEPS', 100, 'REPORT_STEPS')
   tf.app.flags.DEFINE_float('LEARNING_RATE_DECAY_FACTOR', 0.8, 'LEARNING_RATE_DECAY_FACTOR')
 
-  crnn = CRNN(n_class, input_shape=[None, width, height, 1])
+  crnn = CRNN(n_class, input_shape=[None, width, height, 1],
+              save_when_acc_gt=0.7, model_output_path='/home/lian/PycharmProjects/sequence-recognition/model')
   crnn.architecture()
-  crnn.run()
+  crnn.run(epoch=1024, step=128)
   # print('Build model done!')
   print('Training done!')
